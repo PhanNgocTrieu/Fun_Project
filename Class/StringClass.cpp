@@ -87,15 +87,17 @@ String& String::operator=(const String& s)
     strcpy(mStr, s.mStr);
     return *this;
 }
-String& String::operator-(const String& s)
+
+    reString& String::operator-(const String& s)
 {
     cout << "Go here!" << endl;
     if (this->compare(s) == true)
     {
         cout << "Go here 1!" << endl;
-        char * preStr = mStr;
+        char* preStr = mStr;
         m_length = 0;
         mStr = new char[m_length + 1];
+        mStr[0] = '\0';
         delete[] preStr;
         preStr = NULL;
         return *this;
@@ -105,23 +107,31 @@ String& String::operator-(const String& s)
         cout << "Go here 2!" << endl;
         // save old String
         // count how many word s in mStr
-        int count_s = countString(*this,s);
-         cout << "Count =  "<< count_s << endl;
+        int count_s = countString(*this, s);
+        cout << "Count =  " << count_s << endl;
         if (count_s == 0)
         {
             return *this;
         }
         else
         {
-           
-            char *save = mStr;
-            m_length = strlen(mStr) - count_s * strlen(s.mStr);
-            char *mStr = new char[m_length + 1];
+            char* save = mStr;
+            int max_save = strlen(save);
+            int max_s = strlen(s.mStr);
+            m_length = max_save - count_s * max_s + 1;
+            cout << "len: " << m_length << endl;
+            char* mStr = new char[m_length];
+            memset(mStr, 0, m_length);
+            int max = max_save - max_s;
             int idex = 0;
             int idex_insert = 0;
             int flag = 0;
-            while (idex < strlen(mStr))
+            while (idex < max_save)
             {
+                // "Trieu Nhan" - 10
+                // "Nhan" - 4
+                // 7
+                //    idex = 6
                 if (save[idex] != s.mStr[0])
                 {
                     *(mStr + idex_insert) = *(save + idex);
@@ -131,33 +141,42 @@ String& String::operator-(const String& s)
                 }
                 else
                 {
+                    // idex = 6;
                     int t_idex = idex;
-                    while (t_idex < strlen(s.mStr))
+                    int t_idex_s2 = 0;
+                    cout << s.mStr << "- max: " << max_s << endl;
+                    while (t_idex_s2 < max_s)
                     {
-                        cout << "save = " << save[t_idex] << "; s = " << s.mStr[t_idex] << endl;
-                        if (save[t_idex] != s.mStr[t_idex])
+                        // 'ABCDCEF' = 6
+                        // 'DE' = 
+                        cout << "save = " << *(save + t_idex) << "; s = " << *(s.mStr + t_idex_s2) << endl;
+                        if (*(save+t_idex) != *(s.mStr + t_idex_s2))
                         {
                             flag++;
                             break;
                         }
                         else
                         {
+                            cout << "call!" << endl;
                             t_idex++;
+                            t_idex_s2++;
                         }
                     }
                     if (flag == 0)
                     {
-                        idex = idex + strlen(s.mStr);
+                        idex = idex + max_s;
                     }
                     else
                     {
-                        *(mStr + idex) = *(save + idex);
+                        *(mStr + idex_insert) = *(save + idex);
                         //mStr[idex] = save[idex];
                         idex++;
                         idex_insert++;
+                        flag = 0;
                     }
                 }
             }
+            mStr[m_length - 1] = '\0';
             delete[] save;
             save = NULL;
         }
