@@ -25,6 +25,7 @@ public:
     Matrix& operator*=(const Matrix&);
     Matrix& operator*=(const double&);
     Matrix& operator/=(const double&);
+    Matrix& operator=(const Matrix&);
  
 
     void allocSpace();
@@ -43,14 +44,23 @@ public:
  Matrix operator+(const Matrix&, const Matrix&);
  Matrix operator-(const Matrix&, const Matrix&);
  Matrix operator*(const Matrix&, const Matrix&);
- Matrix operator*(const Matrix&, const double& num);
+ Matrix operator*(const Matrix&, const double&);
  Matrix operator/(const Matrix&, const double&);
 
 
- Matrix cofactor(const Matrix& mat, const int&, const int&);
- double determinant(const Matrix& mat);
- Matrix adjoint(const Matrix& mat);
- Matrix inverse(const Matrix& mat);
+ Matrix cofactor(const Matrix&, const int&, const int&);
+ double determinant(const Matrix&);
+ Matrix adjoint(const Matrix&);
+ Matrix inverse(const Matrix&);
 
-
+ Matrix Sum(const Matrix&, const Matrix&);
+ Matrix Sub(const Matrix&, const Matrix&);
+ Matrix MulMatrix(const Matrix&, const Matrix&);
+ Matrix MulNumber(const Matrix&, const double&);
+ Matrix DivMatrix(const Matrix&, const Matrix&);
+ Matrix DivNumber(const Matrix&, const double&);
+ void printConsole();
+ void MultiConsole();
+ void DivConsole();
+ 
 #endif
