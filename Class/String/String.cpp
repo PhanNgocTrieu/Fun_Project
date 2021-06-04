@@ -158,9 +158,12 @@ void String::erase(const int& _beg, const int& _count)
     mLen = temp.mLen - _count;
     /*std::cout << "len : " << mLen << std::endl;*/
     allocSpace();
-   
+
+    /*std::cout << "_beg: " << _beg << std::endl;
+    std::cout << "_count: " << _count << std::endl;*/
     for (int idex = 0; idex < temp.mLen; idex++)
-    { 
+    {
+        /*std::cout << "call idex: " << idex << std::endl;*/
         if (temp.mStr[idex] == '\0')
         {
             /*std::cout << "call '\0': " << idex << std::endl;*/
@@ -184,6 +187,7 @@ void String::insert(const int& _pos, const String& s)
     assert(_pos >= 0 && _pos < mLen);
     if (_pos == mLen - 1)
     {
+        std::cout << "Insert function: _pos == mLen - 1! " << std::endl;
         String save = *this;
         mLen = strlen(mStr) + strlen(s.mStr) + 1;
         allocSpace();
@@ -194,23 +198,18 @@ void String::insert(const int& _pos, const String& s)
     }
     else
     {
+        std::cout << "Insert function: _pos != mLen - 1! " << std::endl;
         int iRun = 0;
         String save = *this;
-        //std::cout << "mLen: " << mLen << std::endl;
-        //std::cout << "s.mLen: " << strlen(s.mStr) << std::endl;
         mLen = strlen(mStr) + strlen(s.mStr);
-        //std::cout << "S.mStr: " << s.mStr << std::endl;
-        //std::cout << "mLen: " << mLen << std::endl;
         allocSpace();
         for (int idex = 0; idex < mLen - strlen(s.mStr); idex++)
         {
-            std::cout << "idx: " << idex << std::endl;
             if (idex == _pos)
             {
                 int iPos = 0;
                 while (iPos < strlen(s.mStr))
                 {
-                    //std::cout << "iPos: " << iPos << std::endl;
                     mStr[iRun] = s.mStr[iPos];
                     //std::cout << "mStr[" << iPos << "] = " << mStr[iRun]  << std::endl;
                     iRun++;
@@ -257,6 +256,31 @@ void String::pop_back()
         mStr[idex] = temp.mStr[idex];
     }
     mStr[mLen - 1] = '\0';
+}
+String String::substr(const int& _pos, const size_t& _count)
+{
+    if (_pos < 0 && _pos >= mLen)
+        std::cerr << "Error! Out of Index!" << std::endl;
+    
+    int len = _count + 1;
+    String Temp{ len };
+    int iPus = 0;
+    int iAss = _pos;
+    while (iAss < len && mStr[iAss] != '\0')
+    {
+        Temp.mStr[iPus] = mStr[iAss];
+        iPus++;
+        iAss++;
+    }
+    Temp.mStr[len - 1] = '\0';
+    return String(Temp);
+}
+const char& String::at(const int& _pos)
+{
+    // TODO: insert return statement here
+    if (_pos < 0 && _pos > mLen)
+        std::cerr << "Error! Out of index!" << std::endl;
+    return mStr[_pos];
 }
 int strCompare(const String& s1, const String& s2)
 {
