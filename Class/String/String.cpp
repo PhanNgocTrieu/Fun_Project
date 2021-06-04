@@ -158,12 +158,9 @@ void String::erase(const int& _beg, const int& _count)
     mLen = temp.mLen - _count;
     /*std::cout << "len : " << mLen << std::endl;*/
     allocSpace();
-
-    /*std::cout << "_beg: " << _beg << std::endl;
-    std::cout << "_count: " << _count << std::endl;*/
+   
     for (int idex = 0; idex < temp.mLen; idex++)
-    {
-        /*std::cout << "call idex: " << idex << std::endl;*/
+    { 
         if (temp.mStr[idex] == '\0')
         {
             /*std::cout << "call '\0': " << idex << std::endl;*/
@@ -199,11 +196,11 @@ void String::insert(const int& _pos, const String& s)
     {
         int iRun = 0;
         String save = *this;
-        std::cout << "mLen: " << mLen << std::endl;
-        std::cout << "s.mLen: " << strlen(s.mStr) << std::endl;
+        //std::cout << "mLen: " << mLen << std::endl;
+        //std::cout << "s.mLen: " << strlen(s.mStr) << std::endl;
         mLen = strlen(mStr) + strlen(s.mStr);
-        std::cout << "S.mStr: " << s.mStr << std::endl;
-        std::cout << "mLen: " << mLen << std::endl;
+        //std::cout << "S.mStr: " << s.mStr << std::endl;
+        //std::cout << "mLen: " << mLen << std::endl;
         allocSpace();
         for (int idex = 0; idex < mLen - strlen(s.mStr); idex++)
         {
@@ -213,9 +210,9 @@ void String::insert(const int& _pos, const String& s)
                 int iPos = 0;
                 while (iPos < strlen(s.mStr))
                 {
-                    std::cout << "iPos: " << iPos << std::endl;
+                    //std::cout << "iPos: " << iPos << std::endl;
                     mStr[iRun] = s.mStr[iPos];
-                    std::cout << "mStr[" << iPos << "] = " << mStr[iRun]  << std::endl;
+                    //std::cout << "mStr[" << iPos << "] = " << mStr[iRun]  << std::endl;
                     iRun++;
                     iPos++;
                 }
@@ -224,7 +221,7 @@ void String::insert(const int& _pos, const String& s)
             else
             {
                 mStr[iRun] = save.mStr[idex];
-                std::cout << "mStr[" << iRun << "] = " << mStr[iRun] << std::endl;
+                //std::cout << "mStr[" << iRun << "] = " << mStr[iRun] << std::endl;
                 iRun++; 
             }
         }
