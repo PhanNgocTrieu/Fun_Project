@@ -28,6 +28,10 @@ public:
     void insert(const int& _pos, const String& _s);
     void push_back(const char&);
     void pop_back();
+    String substr(const int& _pos, const size_t& _count);
+    const char& at(const int& _pos);
+
+
 
     void allocSpace();
 public:
