@@ -2,6 +2,7 @@
 #include <cassert>
 #include <iostream>
 #include <stdexcept>
+#include <iomanip>
 using namespace std;
 
 
@@ -90,8 +91,16 @@ void Matrix::allocSpace()
 }
 void Matrix::ipMatrix()
 {
+    
     cout << "Enter rows: ", cin >> rows;
     cout << "Enter cols: ", cin >> cols;
+    while (rows != cols)
+    {
+        cout << "Enter again! Make sure NxN matrix!" << endl;
+        cout << "Enter rows: ", cin >> rows;
+        cout << "Enter cols: ", cin >> cols;
+    }
+    
     allocSpace();
     cin >> *this;
 }
@@ -103,6 +112,7 @@ void Matrix::printMatrix()
 // *************************** Overloading ********************************
 istream& operator >> (istream& is, Matrix& mat)
 {
+    cout << endl;
     for (int iRows = 0; iRows < mat.rows; ++iRows) {
         for (int iCols = 0; iCols < mat.cols; ++iCols)
         {
@@ -115,11 +125,10 @@ istream& operator >> (istream& is, Matrix& mat)
 std::ostream& operator <<(std::ostream& os, Matrix& mat)
 {
     cout << endl;
-    cout << "Matrix's data:" << endl;
     for (int iRows = 0; iRows < mat.rows; ++iRows) {
         for (int iCols = 0; iCols < mat.cols; ++iCols)
         {
-            os << mat.arr[iRows][iCols] << " - ";
+            os << mat.arr[iRows][iCols] << "  ";
         }
         os << endl;
     }
@@ -140,8 +149,8 @@ Matrix operator-(const Matrix& mat1, const Matrix& mat2)
 }
 Matrix operator*(const Matrix& mat1, const Matrix& mat2)
 {
-    Matrix t_mat{ mat1 };
-    return (t_mat *= mat2);
+    Matrix temp{ mat1 };
+    return (temp *= mat2);
 }
 Matrix operator*(const Matrix& mat1, const double& num)
 {
@@ -156,10 +165,13 @@ Matrix operator/(const Matrix& mat, const double& num)
 Matrix operator/(const Matrix& mat1, const Matrix& mat2)
 {
     assert(mat1.getCols() == mat2.getCols());
-    Matrix ivMat2{ inverse(mat2) };
-    cout << "\n Print inside division 2 matrixs: " << endl;
+    Matrix ivMat2 = inverse(mat2);
+
+    cout << "\n Print inside division 2 matrixs - inverse matrix: " << endl;
     ivMat2.printMatrix();
-    return (mat1 * ivMat2);
+    
+    Matrix temp{ mat1 };
+    return (temp *= ivMat2);
 }
 Matrix& Matrix::operator+=(const Matrix& mat)
 {
@@ -167,8 +179,7 @@ Matrix& Matrix::operator+=(const Matrix& mat)
     {
         for (int iCols = 0; iCols < cols; iCols++)
         {
-            *(*arr + iRows * cols + iCols) += *(*mat.arr + iRows * cols + iCols);
-            // arr[iRows][iCols] += mat.arr[iRows][iCols];
+            arr[iRows][iCols] += mat.arr[iRows][iCols];
         }
     }
     return *this;
@@ -189,7 +200,7 @@ Matrix& Matrix::operator*=(const Matrix& mat)
     assert(cols == mat.rows);
     // After multiple we will have arr[rows][mat.cols]
     Matrix tMat{ rows,mat.cols };
-    for (int iRows = 0; tMat.rows < rows; iRows++)
+    for (int iRows = 0; iRows < rows; iRows++)
     {
         for (int iCols = 0; iCols < tMat.cols; iCols++)
         {
@@ -225,6 +236,36 @@ Matrix& Matrix::operator/=(const double& num)
     }
     return (*this);
 }
+Matrix& Matrix::operator=(const Matrix& mat)
+{
+    if (this == &mat)
+        return *this;
+
+    if (rows != mat.rows || cols != mat.cols)
+    {
+        // delete old
+        for (int iRows = 0; iRows < rows; iRows++)
+        {
+            delete[] arr[iRows];
+        }
+        delete[] arr;
+
+        // initializing new space
+        rows = mat.rows;
+        cols = mat.cols;
+        allocSpace();
+    }
+
+    for (int iRows = 0; iRows < rows; iRows++)
+    {
+        for (int iCols = 0; iCols < cols; iCols++)
+        {
+            arr[iRows][iCols] = mat.arr[iRows][iCols];
+        }
+    }
+
+    return *this;
+}
 
 
 // *************************** Functions ********************************
@@ -243,7 +284,6 @@ A = 1 | 1  2  3 | => det(A) = 3*  |        | - 4* |        |  + 5* |       |
 */
 Matrix cofactor(const Matrix& mat,const int& rowAvoid, const int& colAvoid)
 {
-    cout << "Going cofactor: " << endl;
     Matrix temp{ mat.getCols() - 1, mat.getRows() - 1 };
     double res = 0;
     double** tArr = mat.getArr();
@@ -268,10 +308,8 @@ Matrix cofactor(const Matrix& mat,const int& rowAvoid, const int& colAvoid)
 }
 double determinant(const Matrix& mat)
 {
-    cout << "Going determinant: " << endl;
     if (mat.getCols() == 1)
     {
-        cout << "come here when N = 1! and value of mat.getArr()[0][0]: " << endl;
         double temp = mat.getArr()[0][0];
         return temp;
     }
@@ -287,8 +325,6 @@ double determinant(const Matrix& mat)
     }
     return D;
 }
-
-
 /*
        *********************How to find Adjoint?******************
 We follow definition given above.
@@ -303,9 +339,7 @@ Let A[N][N] be input matrix.
 */
 Matrix adjoint(const Matrix& mat)
 {
-    // making sure that arr[][] have nxn order:
-    cout << "Going ajoint: " << endl;
-
+    assert(mat.getCols() == mat.getRows());
     Matrix adj{ mat.getCols(),mat.getCols() };
     if (mat.getCols() == 1)
     {
@@ -347,11 +381,10 @@ Summary:
 Matrix inverse(const Matrix& mat)
 {
     assert(mat.getCols() == mat.getRows());
-    cout << "Going Inverse: " << endl;
+   
     int N = mat.getCols();
     Matrix inver{ N,N };
     Matrix _adj = adjoint(mat);
-    cout << "Pass here!" << endl;
     double _det = determinant(mat);
 
     if (_det == 0)
@@ -361,7 +394,62 @@ Matrix inverse(const Matrix& mat)
     }
     else
     {
-        cout << "Inverse doesn't exist!";
+        inver = _adj / _det;
         return inver;
     }
+}
+
+
+Matrix Sum(const Matrix& mat1, const Matrix& mat2)
+{   
+    Matrix Temp { mat1 };
+    return (Temp + mat2);
+}
+Matrix Sub(const Matrix& mat1, const Matrix& mat2)
+{
+    return mat1 - mat2;
+}
+Matrix MulMatrix(const Matrix& mat1, const Matrix& mat2)
+{
+    return mat1 * mat2;
+}
+Matrix MulNumber(const Matrix& mat, const double& number)
+{
+    return mat * number;
+}
+Matrix DivMatrix(const Matrix& mat1, const Matrix& mat2)
+{
+    return mat1 / mat2;
+}
+Matrix DivNumber(const Matrix& mat, const double& num)
+{
+    return mat / num;
+}
+void printConsole()
+{
+    cout << setw(50) << "************************ CONSOLE MATRIX ***********************" << endl;
+    cout << setw(50) << "*                1.Inputing for two Matrices                  *" << endl;
+    cout << setw(50) << "*                2.Calculating Sum of two Matrices            *" << endl;
+    cout << setw(50) << "*                3.Subtraction of two Matrices                *" << endl;
+    cout << setw(50) << "*                4.Multiplication of Matrices                 *" << endl;
+    cout << setw(50) << "*                5.Division of Matrices                       *" << endl;
+    cout << setw(50) << "*                0.Exit                                       *" << endl;
+    cout << setw(50) << "***************************************************************" << endl;
+}
+void MultiConsole()
+{
+    cout << endl;
+    cout << setw(50) << "*************** CONSOLE: Multiplication MATRIX ****************" << endl;
+    cout << setw(50) << "*               0.Multiplication for two Matrices             *" << endl;
+    cout << setw(50) << "*               1.Multiplication for a double number          *" << endl;
+    cout << setw(50) << "***************************************************************" << endl;
+}
+void DivConsole()
+{
+    cout << endl;
+    cout << setw(50) << "****************** CONSOLE: Division MATRIX *******************" << endl;
+    cout << setw(50) << "*               0.Division for two Matrices                   *" << endl;
+    cout << setw(50) << "*               1.Division for a double number                *" << endl;
+    cout << setw(50) << "***************************************************************" << endl;
+    cout << endl;
 }
