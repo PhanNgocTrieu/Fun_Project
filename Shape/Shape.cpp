@@ -393,11 +393,7 @@ vector<Shape *> readShapesFromFile(const string &filename)
 
 int main()
 {
-    #ifdef SIMPLE
-    Factory* factory = new SimpleShapeFactory;
-    #elif ROBUST
-    Factory* factory = new RobustShapeFactory;
-    #endif
+   
 
 
     Point p1(3, 5);
