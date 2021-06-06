@@ -47,15 +47,11 @@ public:
 class Factory
 {
 public:
-    Factory() : shape{NULL} {}
-    Factory(Shape* const _shape) : shape{_shape} {} 
+    Factory() {}
     ~Factory() {}
     Shape *createShape(int _type, const string &s);
     vector<Shape *> readShapesFromFile(const string &filename);
     void saveShapesToFile(const string &filename, const vector<Shape *> &shapes);
-
-private:
-    Shape* shape;
 };
 
 class Triangle : public Shape
@@ -349,8 +345,12 @@ string Triangle::toString()
 {
     string s = "";
     s += to_string(0) + " ";
-    s += to_string(getArea()) + " ";
-    s += to_string(getPerimeter()) + " ";
+    s += to_string(static_cast<int>(getA().getX())) + " ";   // Ax
+    s += to_string(static_cast<int>(getA().getY())) + " ";   // Ay
+    s += to_string(static_cast<int>(getB().getX())) + " ";   // Bx
+    s += to_string(static_cast<int>(getB().getY())) + " ";   // By
+    s += to_string(static_cast<int>(getC().getX())) + " ";   // Cx
+    s += to_string(static_cast<int>(getC().getY())) + " ";   // Cy
     return string(s);
 }
 
@@ -418,8 +418,10 @@ string Rectangle::toString()
 {
     string s = "";
     s += to_string(1) + " ";
-    s += to_string(getArea()) + " ";
-    s += to_string(getPerimeter()) + " ";
+    s += to_string(static_cast<int>(getI().getX())) + " ";   // Ix
+    s += to_string(static_cast<int>(getI().getY())) + " ";   // Iy
+    s += to_string(static_cast<int>(getWidth())) + " ";      // Width
+    s += to_string(static_cast<int>(getLength())) + " ";     // Length
     return string(s);
 }
 
@@ -477,8 +479,9 @@ string Circle::toString()
 {
     string s = "";
     s += to_string(2) + " ";
-    s += to_string(getArea()) + " ";
-    s += to_string(getPerimeter()) + " ";
+    s += to_string(static_cast<int>(getI().getX())) + " ";   // Ix
+    s += to_string(static_cast<int>(getI().getY())) + " ";   // Iy
+    s += to_string(static_cast<int>(getR())) + " ";         // R
     return string(s);
 }
 
@@ -513,13 +516,18 @@ double Ellipse::getPerimeter()
         return 2 * Rx * 3.14159;
     else
     {
-        //  Indian mathematician Ramanujan
-        return 3.14159*(sqrt(3 * (Rx + Ry) - sqrt((3 * Rx + Ry) * (Rx * 3 * Ry))));
+        /*
+        h = (a-b)^2 / (a+b)^2;
+        p ~= PI * (a + b) * (1 + 3*h/(10+ sqrt(4 - 3*h)) );
+        */
+        double h = pow((Rx - Ry), 2) / pow((Rx + Ry), 2);
+        double x = 3.1415 * (Rx + Ry) * (1 + 3 * h / (10 + sqrt(4 - 3 * h)));
+        return x;
     }
 }
 double Ellipse::getArea()
 {
-    return 3.14159*Rx*Ry;
+    return 3.14159 * Rx * Ry;
 }
 Shape *Ellipse::fromString(const string &s)
 {
@@ -529,7 +537,6 @@ Shape *Ellipse::fromString(const string &s)
     vector<double> words{};
     int push_text;
     stringstream read(s);
-    //Triangle triag;
     while (read >> push_text)
     {
         if (iRun != 0)
@@ -538,20 +545,21 @@ Shape *Ellipse::fromString(const string &s)
         }
         iRun++;
     }
-    //cout << words[0] << endl;
     Point I{words[0], words[1]};
     setI(I);
     Rx = words[2];
     Ry = words[3];
-
     return this;
 }
 string Ellipse::toString()
 {
+    // writing shape to string
     string s = "";
     s += to_string(3) + " ";
-    s += to_string(getArea()) + " ";
-    s += to_string(getPerimeter()) + " ";
+    s += to_string(static_cast<int>(getI().getX())) + " ";   // Ix
+    s += to_string(static_cast<int>(getI().getY())) + " ";   // Iy
+    s += to_string(static_cast<int>(getRx())) + " ";         // Rx
+    s += to_string(static_cast<int>(getRy())) + " ";         // Ry
     return string(s);
 }
 
@@ -559,31 +567,32 @@ string Ellipse::toString()
 
 Shape *Factory::createShape(int _type, const string &s)
 {
+    Shape *create;
     if (_type == 0)
     {
-        Triangle trg;
-        trg.fromString(s);
-        shape = &trg;
+        create = new Triangle;
+        create->fromString(s);
+        return create;
     }
     if (_type == 1)
     {
-        Rectangle rtg;
-        rtg.fromString(s);
-        shape = &rtg;
+        create = new Rectangle;
+        create->fromString(s);
+        return create;
     }
     if (_type == 2)
     {
-        Circle c;
-        c.fromString(s);
-        shape = &c;
+        create = new Circle;
+        create->fromString(s);
+        return create;
     }
     if (_type == 3)
     {
-        Ellipse ell;
-        ell.fromString(s);
-        shape = &ell;
+        create = new Ellipse;
+        create->fromString(s);
+        return create;
     }
-    return shape;
+    return create;
 }
 vector<Shape *> Factory::readShapesFromFile(const string &filename)
 {
@@ -606,7 +615,7 @@ vector<Shape *> Factory::readShapesFromFile(const string &filename)
         {
             cout << "Make Triangle!" << endl;
             shapeList.push_back(createShape(0, s));
-        }  
+        }
         if (s[0] == '1')
         {
             cout << "Make Rectangle!" << endl;
@@ -616,62 +625,40 @@ vector<Shape *> Factory::readShapesFromFile(const string &filename)
         {
             cout << "Make Circle!" << endl;
             shapeList.push_back(createShape(2, s));
-        }  
+        }
         if (s[0] == '3')
         {
             cout << "Make Ellipse!" << endl;
             shapeList.push_back(createShape(3, s));
         }
     }
-    cout << shapeList.size() << endl;
-    cout << shapeList[0]->getArea() << endl;
-    //cout << shapeList[1]->getArea() << endl;
-    //cout << shapeList[2]->getArea() << endl;
-    //cout << shapeList[3]->getArea() << endl;
+    // cout << shapeList.size() << endl;
+    // cout << shapeList[0]->getArea() << endl;
+    // cout << shapeList[1]->getArea() << endl;
+    // cout << shapeList[2]->getArea() << endl;
+    // cout << shapeList[3]->getArea() << endl;
+    file.close();
     return shapeList;
 }
 void Factory::saveShapesToFile(const string &filename, const vector<Shape *> &shapes)
 {
-
+    std::ofstream Log("log_file.txt", std::ios_base::out | std::ios_base::trunc);
+    for (int idex = 0; idex < shapes.size(); idex++)
+    {
+        Log << "Input: " << shapes[idex]->toString() << endl;
+        Log << "\tOutput:" << shapes[idex]->getArea()  << "\t" << shapes[idex]->getPerimeter() << endl;
+    }
 }
+
+
 int main()
 {
-
-    Point p1(3, 5);
-    cout << "test pow: " << pow(p1.getY(), p1.getX()) << endl;
-    cout << "x = " << p1.getX() << ", y = " << p1.getY() << endl;
-    cout << "x = " << p1.getX() << ", y = " << p1.getY() << endl;
-
-    fstream File;
-    ofstream Log;
-    
-    File.open("data.txt");
-
     Factory fac;
     string filename = "data.txt";
-    vector<Shape*> shapeList;
+    string fileLog = "log_file.txt";
+    vector<Shape *> shapeList;
     shapeList = fac.readShapesFromFile(filename);
-
-    cout << shapeList.size() << endl;
-    //cout << shapeList[0]->getArea() << endl;
-    // cout << shapeList[0]->getPerimeter() << endl;
-
-    string s;
-    getline(File, s);
-
-    cout << s << endl;
-
-    Triangle trg;
-    Shape *shape;
-    shape = trg.fromString(s);
-    cout << shape->getArea() << endl;
-    // cout << shape->getPerimeter() << endl;
-    // std::ofstream Log("log_file.txt", std::ios_base::out | std::ios_base::app);
-    // Log << shape->toString() << endl;
-
-    // File.close();
-
+    fac.saveShapesToFile(fileLog, shapeList);
+    
     return 0;
 }
-
-// cái này mình có cần mấy cái file vs code không nhỷ? hay tạo 1 cái là nó tự động rồi?
