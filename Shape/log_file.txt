@@ -1,0 +1,8 @@
+Input: 0 3 4 5 3 22 11 
+	Output:16.5	41.2728
+Input: 1 3 4 20 10 
+	Output:200	60
+Input: 2 3 4 15 
+	Output:706.5	94.2
+Input: 3 3 4 22 33 
+	Output:2280.79	174.515
