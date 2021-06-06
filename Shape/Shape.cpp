@@ -263,12 +263,10 @@ double dotProduct(const Point &A, const Point &B, const Point &C, const Point &D
 {
     return dotProduct(B - A, D - C);
 }
-double theta(const Point &A, const Point &B, const Point &C, const Point &D)
-{
-    return double();
-}
 
-/*  ===================================  Shape  ======================================  */
+
+
+/*  ===================================  Shape  =========================================  */
 
 /*  ===================================  TRIANGLE  ======================================  */
 void Triangle::setA(const Point &p)
@@ -632,11 +630,6 @@ vector<Shape *> Factory::readShapesFromFile(const string &filename)
             shapeList.push_back(createShape(3, s));
         }
     }
-    // cout << shapeList.size() << endl;
-    // cout << shapeList[0]->getArea() << endl;
-    // cout << shapeList[1]->getArea() << endl;
-    // cout << shapeList[2]->getArea() << endl;
-    // cout << shapeList[3]->getArea() << endl;
     file.close();
     return shapeList;
 }
@@ -653,12 +646,16 @@ void Factory::saveShapesToFile(const string &filename, const vector<Shape *> &sh
 
 int main()
 {
-    Factory fac;
+    Factory *fac = new Factory;
     string filename = "data.txt";
     string fileLog = "log_file.txt";
     vector<Shape *> shapeList;
-    shapeList = fac.readShapesFromFile(filename);
-    fac.saveShapesToFile(fileLog, shapeList);
-    
+    shapeList = fac->readShapesFromFile(filename);
+    fac->saveShapesToFile(fileLog, shapeList);
+
+
+
+
+    delete fac;
     return 0;
 }
