@@ -607,7 +607,6 @@ vector<Shape *> Factory::readShapesFromFile(const string &filename)
     // processing string by string
     for (int idex = 0; idex < save.size(); idex++)
     {
-        cout << s << endl;
         string s = save[idex];
         if (s[0] == '0')
         {
@@ -652,9 +651,6 @@ int main()
     vector<Shape *> shapeList;
     shapeList = fac->readShapesFromFile(filename);
     fac->saveShapesToFile(fileLog, shapeList);
-
-
-
 
     delete fac;
     return 0;
