@@ -153,6 +153,14 @@ public:
         return _mSize;
     }
 
+
+    /**
+     * @brief setMiddle - middle pointer point to the middle elem of list
+     * @algorithm: 
+     *          passing to middle of list
+     *          middle = curr (middle of list)
+     * @result Print infors if true - otherwise "Not Found"
+    */
     void setMiddle()
     {
         printf("Line: %d - Function: %s()\n", __LINE__, __FUNCTION__);
@@ -172,6 +180,15 @@ public:
         List = nullptr;
     }
 
+    /**
+     * @brief push_back - insert elem at the back of list
+     * @algorithm: 
+     *          newNode->prev = tail
+     *          tail->next = newNode
+     *          tail = newNode
+     *          head = newNode (make head point to the first elem of list)
+     * @result Print infors if true - otherwise "Not Found"
+    */
     void push_back(const Student &_student)
     {
         printf("Line: %d - Function: %s( const Student &_student )\n", __LINE__, __FUNCTION__);
@@ -186,6 +203,7 @@ public:
             mTail = mSvList;
             mMiddle = mSvList;
             _mSize++;
+            newNode = nullptr;
             return;
         }
         newNode->prev = mTail;
@@ -193,8 +211,20 @@ public:
         mTail = newNode;
         setMiddle();
         _mSize++;
+
+        // newNode points to null
+        newNode = nullptr;
     }
 
+    /**
+     * @brief push_front - insert elem at the front of list
+     * @algorithm: 
+     *          newNode->prev = nullptr
+     *          newNode->next = head
+     *          head->prev = newNode
+     *          head = newNode (make head point to the first elem of list)
+     * @result Print infors if true - otherwise "Not Found"
+    */
     void push_front(const Student &_student)
     {
         printf("Line: %d - Function: %s( const Student& _student )\n", __LINE__, __FUNCTION__);
@@ -220,6 +250,14 @@ public:
         printf("Line: %d - Function: %s( const Student& _student )\n", __LINE__, __FUNCTION__);
     }
 
+    /**
+     * @brief searchingID - Searching elem has 
+     * @param ID_find ID for searching
+     * @algorithm: 
+     *          passing all elems
+     *          print infors if true - otherwise "Not Found"
+     * @result Print infors if true - otherwise "Not Found"
+    */
     void searchID(const int &ID_find)
     {
         if (mSvList == nullptr)
@@ -241,6 +279,16 @@ public:
         cout << "Not Found!" << std::endl;
     }
 
+    /**
+     * @brief SearchingName - Searching elem has @a _nameFind value
+     * @param nameFind name for searching
+     * @algorithm: 
+     *          Passing over all
+     *          If true -> print
+     *          otherwise -> "Not Found!"
+     * @delete: temporary pointers
+     * @result Print infors if true - otherwise "Not Found"
+    */
     void searchName(const string &nameFind)
     {
         printf("Line: %d - Function: %s( const string& nameFind )\n", __LINE__, __FUNCTION__);
@@ -263,6 +311,12 @@ public:
         cout << "Not Found!" << std::endl;
     }
 
+    /**
+     * @brief binarySearchID - Using binary searching algorithm to search elem has ID value
+     * @algorithm: 
+     *          
+     * @result Print infors if true - otherwise "Not Found"
+    */
     void binarySearchID(const int &ID_find)
     {
         printf("Line: %d - Function: %s(const int& ID_find)\n", __LINE__, __FUNCTION__);
@@ -294,6 +348,19 @@ public:
         cout << "Not Found!: " << std::endl;
     }
 
+
+    /**
+     * @brief   Insert - inserting elem which is @a _pos position
+     * 
+     * @algorithm: 
+     *              if (_pos < 0 && _pos > _mSize)
+     *                  return runtime::error("Invalid!");
+     *              else
+     *                  searching _pos
+     *                  insert elem in _pos
+     *              delete tempory pointers
+     * @result  A list was insert an elem in @a _pos position
+    */
     void insert(const Student &_student, const int &_pos)
     {
         printf("Line: %d - Function: %s( svList == nullptr )\n", __LINE__, __FUNCTION__);
@@ -325,12 +392,33 @@ public:
         newNode->next = listMove;
         listMove->prev = newNode;
 
+        // clear pointers
         prev = nullptr;
         listMove = nullptr;
+        newNode = nullptr;
+
         _mSize++;
         setMiddle();
     }
 
+    /**
+     * @brief   remove - remove elem which has the same ID we input
+     * @param ID_find   input ID for searching
+     * @algorithm:  return if list is nullptr
+     *              else
+     *                  passing while list to find elem has the same ID
+     *                  if (found)
+     *                      // This is last node
+     *                      if (curr->next != nullptr)
+     *                      *prev->next = nullptr (make last pointer equal nullptr)
+     *                      *curr->prev = nullptr (make prev pointer equal nullptr)
+     *                  else
+     *                      prevNode->next = curr->next;
+     *                      curr->next->prev = prevNode;
+     *              deleve curr;
+     *              prev = nullptr;
+     * @result A list was removed elem has the same input ID
+    */
     void remove(const int &ID_find)
     {
         printf("Line: %d - Function: %s( svList == nullptr )\n", __LINE__, __FUNCTION__);
@@ -340,26 +428,27 @@ public:
             return;
         }
         nodeBlock *prevNode = nullptr;
-        nodeBlock *saveNode = mSvList;
-        while (saveNode != nullptr)
+        nodeBlock *curr = mSvList;
+        while (curr != nullptr)
         {
-            if (saveNode->mStudent.getID() == ID_find)
+            if (curr->mStudent.getID() == ID_find)
             {
                 // this for last node
-                if (saveNode->next == nullptr)
+                if (curr->next == nullptr)
                 {
                     prevNode->next = nullptr;
-                    saveNode->prev = nullptr;
+                    curr->prev = nullptr;
                     mTail = prevNode;
                 }
                 else
                 {
                     // node is in middle
-                    prevNode->next = saveNode->next;
-                    saveNode->next->prev = prevNode;
+                    prevNode->next = curr->next;
+                    curr->next->prev = prevNode;
                 }
-                delete saveNode;
-                saveNode = nullptr;
+                delete curr;
+                curr = nullptr;
+                prevNode = nullptr;
                 _mSize--;
                 if (_mSize == 0)
                 {
@@ -368,12 +457,25 @@ public:
                 setMiddle();
                 return;
             }
-            prevNode = saveNode;
-            saveNode = saveNode->next;
+            prevNode = curr;
+            curr = curr->next;
         }
         cout << "Not Found!" << endl;
+        prevNode = nullptr;
+        curr = nullptr;
     }
 
+    /**
+     * @brief pop_front - popping elem which is in front of list
+     * 
+     * @algorithm: return if list is nullptr
+     *             else
+     *              *saveNode = *tail
+     *              *tail->prev->next = nullptr (move to one elem)
+     *              *saveNode->prev = nullptr (make prev pointer equal nullptr)
+     *              deleve saveNode
+     * @result A list was removed first elem
+    */
     void pop_back()
     {
         if (mSvList == nullptr)
@@ -400,6 +502,17 @@ public:
         printf("Line: %d - Function: %s( Out of Pop_back() )\n", __LINE__, __FUNCTION__);
     }
 
+    /**
+     * @brief pop_front - popping elem which is in front of list
+     * 
+     * @algorithm: return if list is nullptr
+     *             else
+     *              *saveNode = *head
+     *              *head = head->next (move to one elem)
+     *              *heaed->prev = nullptr (make prev pointer equal nullptr)
+     *              deleve saveNode
+     * @result A list was removed first elem
+    */
     void pop_front()
     {
         if (mSvList == nullptr)
@@ -426,6 +539,12 @@ public:
         printf("Line: %d - Function: %s( Out of Pop_front() )\n", __LINE__, __FUNCTION__);
     }
 
+    /**
+     * @brief BubbleSortID - do sorting elems in list by value of ID - increasingly
+     * @param void return
+     * @result void - *this - A List was ordered by ID
+     * 
+    **/
     void bubbleSortID()
     {
         if (mSvList == nullptr)
@@ -454,6 +573,11 @@ public:
         }
     }
 
+    /** 
+     * @brief This function do print all elems in list
+     * @param void return
+     * @result list of elems
+    **/
     void print()
     {
         cout << "\nPrint List: " << endl;
@@ -533,9 +657,9 @@ int main()
     svList->insert(sv12, 5);
     svList->print();
 
-    // cout << "****************** Removing by ID ****************" << endl;
-    // svList->remove(66);
-    // svList->print();
+    cout << "****************** Removing by ID ****************" << endl;
+    svList->remove(66);
+    svList->print();
 
     cout << "****************** Deallocated All Memories Have Been Allocated ************" << endl;
     if (svList)
