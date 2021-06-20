@@ -1,5 +1,8 @@
 #include <iostream>
-
+#include <iomanip>
+#include <string>
+#include <string.h>
+#include <limits>
 using namespace std;
 
 class Student
@@ -31,16 +34,55 @@ public:
         _mName = name;
     }
 
+    bool checkName() const
+    {
+        for (char c : _mName)
+        {
+            if (c == ' ')
+                continue;
+            else
+            {
+                if (!((c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')))
+                {
+                    return false;
+                }
+            }
+            
+        }
+        return true;
+    }
+
     friend ostream &operator<<(ostream &os, const Student &sv)
     {
-        os << "ID: " << sv._mID << "\tStudent: " << sv._mName << endl;
+        os << "\tID : " << sv._mID << " ------- Name: " << sv._mName;
         return os;
     }
     friend istream &operator>>(istream &is, Student &sv)
     {
+        printf("Line: %d - Function: %s()\n", __LINE__, __FUNCTION__);
         std::cout << "Enter SV: " << endl;
-        cout << "ID: ", is >> sv._mID;
-        cout << "Student: ", is >> sv._mName;
+        cout << "ID_enter: ", is >> sv._mID;
+        while (is.fail())
+        {
+            if (is.fail())
+            {
+                is.clear();
+                cin.ignore(numeric_limits<streamsize>::max(),'\n');
+                cout<< "You have entered wrong input" <<endl;
+                cout << "ID_enter: ", is >> sv._mID;
+            }
+        }
+        // clear buffer
+        cin.ignore(numeric_limits<streamsize>::max(),'\n');
+
+        printf("Line: %d - Function: %s()\n", __LINE__, __FUNCTION__);
+        cout << "Name_enter: ", getline(is,sv._mName);
+        while (!sv.checkName())
+        {
+            cout << "You enter wrong input - Not include special characters!" << endl;
+            cout << "Name_enter: ", getline(is,sv._mName,'\n');
+        }
+        is.sync();
         return is;
     }
 };
@@ -175,6 +217,7 @@ public:
             _mSize++;
         }
         setMiddle();
+        printf("Line: %d - Function: %s( const Student& _student )\n", __LINE__, __FUNCTION__);
     }
 
     void searchID(const int &ID_find)
@@ -189,7 +232,29 @@ public:
         {
             if (listSearching->mStudent.getID() == ID_find)
             {
-                cout << "Found! This is Information: " << std::endl;
+                cout << "Found ID: " << ID_find << " -- This is Information: " << std::endl;
+                cout << listSearching->mStudent;
+                return;
+            }
+            listSearching = listSearching->next;
+        }
+        cout << "Not Found!" << std::endl;
+    }
+
+    void searchName(const string &nameFind)
+    {
+        printf("Line: %d - Function: %s( const string& nameFind )\n", __LINE__, __FUNCTION__);
+        if (mSvList == nullptr)
+        {
+            cout << "Not Found! List is Empty!" << std::endl;
+            return;
+        }
+        nodeBlock *listSearching = mSvList;
+        while (listSearching != nullptr)
+        {
+            if (listSearching->mStudent.getName() == nameFind)
+            {
+                cout << "Found name: " << nameFind << " -- This is Information: " << std::endl;
                 cout << listSearching->mStudent;
                 return;
             }
@@ -200,6 +265,7 @@ public:
 
     void binarySearchID(const int &ID_find)
     {
+        printf("Line: %d - Function: %s(const int& ID_find)\n", __LINE__, __FUNCTION__);
         if (mSvList == nullptr)
         {
             cout << "Not Found! List is Empty!" << std::endl;
@@ -230,6 +296,7 @@ public:
 
     void insert(const Student &_student, const int &_pos)
     {
+        printf("Line: %d - Function: %s( svList == nullptr )\n", __LINE__, __FUNCTION__);
         if (_pos < 0 || _pos > _mSize)
         {
             throw std::runtime_error("Invalid!");
@@ -246,17 +313,91 @@ public:
         nodeBlock *newNode = new nodeBlock(_student);
         nodeBlock *prev = nullptr;
         nodeBlock *listMove = mSvList;
-        int i = 0;
+        int i = 1;
         while (i < _pos)
         {
             i++;
             prev = listMove;
             listMove = listMove->next;
         }
+        prev->next = newNode;
+        newNode->prev = prev;
         newNode->next = listMove;
-        newNode->prev = listMove->prev;
-        listMove->prev->next = newNode;
         listMove->prev = newNode;
+
+        prev = nullptr;
+        listMove = nullptr;
+        _mSize++;
+        setMiddle();
+    }
+
+    void remove(const int &ID_find)
+    {
+        printf("Line: %d - Function: %s( svList == nullptr )\n", __LINE__, __FUNCTION__);
+        if (mSvList == nullptr)
+        {
+            cout << "Not Found! Empty List!" << endl;
+            return;
+        }
+        nodeBlock *prevNode = nullptr;
+        nodeBlock *saveNode = mSvList;
+        while (saveNode != nullptr)
+        {
+            if (saveNode->mStudent.getID() == ID_find)
+            {
+                // this for last node
+                if (saveNode->next == nullptr)
+                {
+                    prevNode->next = nullptr;
+                    saveNode->prev = nullptr;
+                    mTail = prevNode;
+                }
+                else
+                {
+                    // node is in middle
+                    prevNode->next = saveNode->next;
+                    saveNode->next->prev = prevNode;
+                }
+                delete saveNode;
+                saveNode = nullptr;
+                _mSize--;
+                if (_mSize == 0)
+                {
+                    mSvList = nullptr;
+                }
+                setMiddle();
+                return;
+            }
+            prevNode = saveNode;
+            saveNode = saveNode->next;
+        }
+        cout << "Not Found!" << endl;
+    }
+
+    void pop_back()
+    {
+        if (mSvList == nullptr)
+        {
+            printf("Line: %d - Function: %s( svList == nullptr )\n", __LINE__, __FUNCTION__);
+            throw std::runtime_error("Invalid!");
+        }
+        else
+        {
+            printf("Line: %d - Function: %s( svList->next != nullptr )\n", __LINE__, __FUNCTION__);
+            nodeBlock *saveNode = this->mTail;
+            mTail = mTail->prev;
+            saveNode->next = nullptr;
+            saveNode->prev = nullptr;
+            delete saveNode;
+            saveNode = nullptr;
+            _mSize--;
+            if (_mSize == 0)
+            {
+                mSvList = nullptr;
+            }
+        }
+        setMiddle();
+        printf("Line: %d - Function: %s( Out of Pop_back() )\n", __LINE__, __FUNCTION__);
     }
 
     void pop_front()
@@ -275,8 +416,11 @@ public:
             saveNode->prev = nullptr;
             delete saveNode;
             saveNode = nullptr;
-            printf("Line: %d - Function: %s( svList->next != nullptr )\n", __LINE__, __FUNCTION__);
             _mSize--;
+            if (_mSize == 0)
+            {
+                mSvList = nullptr;
+            }
         }
         setMiddle();
         printf("Line: %d - Function: %s( Out of Pop_front() )\n", __LINE__, __FUNCTION__);
@@ -312,11 +456,10 @@ public:
 
     void print()
     {
+        cout << "\nPrint List: " << endl;
         if (mSvList == nullptr)
             return;
         nodeBlock *List = mSvList;
-        cout << "Print List: " << endl;
-        cout << "KeyID\t Student!" << endl;
         while (List != nullptr)
         {
             std::cout << List->mStudent << std::endl;
@@ -342,7 +485,8 @@ int main()
     Student sv9(3551, "Trieu John 9");
     Student sv10(23432135, "Trieu John 10");
     Student sv11(232123135, "Trieu John 11");
-
+    Student sv12;
+    cin >> sv12;
     //************* PUSHING DATA **************
     cout << "***************************** List 1! **************************" << endl;
     printf("Line: %d - Function: %s()\n", __LINE__, __FUNCTION__);
@@ -358,63 +502,42 @@ int main()
     svList->pop_front();
     printf("Line: %d - Function: %s()\n", __LINE__, __FUNCTION__);
     svList->print();
+    printf("Line: %d - Function: %s()\n", __LINE__, __FUNCTION__);
     svList->insert(sv8, 3);
+    printf("Line: %d - Function: %s()\n", __LINE__, __FUNCTION__);
 
-    cout << "***************************** List 2! **************************" << endl;
-    svList2->push_front(sv2);
-    svList2->pop_front();
+    // cout << "***************************** List 2! **************************" << endl;
+    // svList2->push_front(sv2);
+    // svList2->pop_back();
+    // svList2->print();
+    // cout << "***************************** AFTER SORTING ID BY BUBBLE SORT! **************************" << endl;
+    // svList->bubbleSortID();
+    // svList->print();
 
-    cout << "***************************** AFTER SORTING ID BY BUBBLE SORT! **************************" << endl;
-    //svList->bubbleSortID();
-    //svList->print();
+    // cout << "****************** Searching in Bianry Seaching Way of List in ordering! ****************" << endl;
+    //  printf("Line: %d - Function: %s( binary searching )\n", __LINE__, __FUNCTION__);
+    // svList->binarySearchID(324);
+    // std::cout << std::endl;
+    // printf("Line: %d - Function: %s( binary Searching )\n", __LINE__, __FUNCTION__);
+    // svList->binarySearchID(13231);
+    // std::cout << std::endl;
+    // cout << "****************** Searching in Normal Way of List in ordering! ****************" << endl;
+    // printf("Line: %d - Function: %s( Normal Searching )\n", __LINE__, __FUNCTION__);
+    // svList->searchID(13231);
+    // std::cout << std::endl;
+    // printf("Line: %d - Function: %s( Normal Searching )\n", __LINE__, __FUNCTION__);
+    // svList->searchName("John 3");
+    // std::cout << std::endl;
+    // svList->searchName("Trieu John 8");
+    // std::cout << std::endl;
+    svList->insert(sv12, 5);
+    svList->print();
 
-    cout << "******************************** Searching in Normal Way! *******************************" << endl;
-    //svList->searchID(324);
+    // cout << "****************** Removing by ID ****************" << endl;
+    // svList->remove(66);
+    // svList->print();
 
-    cout << "****************** Searching in Bianry Seaching Way of List in ordering! ****************" << endl;
-    //svList->binarySearchID(324);
-
-    std::cout << std::endl;
-    // //std::cout << "Enter sv : " << std::endl;
-    // //std::cin >> sv1;
-    // printf("Line: %d - Function: %s\n", __LINE__,__FUNCTION__);
-    // studentList->push_back(sv1);
-    // studentList->push_back(sv2);
-    // studentList->push_back(sv3);
-    // studentList->push_back(sv4);
-    // studentList->push_front(sv11);
-    // studentList->push_back(sv5);
-    // // studentList->push_back(sv6);
-    // // studentList->push_front(sv7);
-    // // studentList->push_back(sv8);
-    // // studentList->push_back(sv9);
-    // // studentList->push_front(sv10);
-    // // std::cout << "Full: " << std::endl;
-    // // studentList->print();
-    // // studentList->pop_back();
-    // // std::cout << "pop 1: " << std::endl;
-    // // studentList->print();
-    // // studentList->pop_back();
-    // // std::cout << "pop 2: " << std::endl;
-    // // studentList->print();
-    // // studentList->pop_back();
-    // // std::cout << "pop 3: " << std::endl;
-    // // studentList->print();=-
-    // // studentList->pop_back();
-    // // std::cout << "pop 4: " << std::endl;
-    // std::cout << "******************************Print List!***************************" << std::endl;
-    // studentList->print();
-
-    // studentList->bubbleSortID();
-    // std::cout << "After sorting by ID!" << std::endl;
-    // studentList->print();
-
-    svList->searchID(13231);
-    std::cout << std::endl;
-
-    svList->binarySearchID(13231);
-    std::cout << std::endl;
-
+    cout << "****************** Deallocated All Memories Have Been Allocated ************" << endl;
     if (svList)
     {
         delete svList;
