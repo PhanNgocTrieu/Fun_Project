@@ -8,7 +8,7 @@ using namespace std;
 class Student
 {
     int _mID;
-    std::string _mName;
+    string _mName;
 
 public:
     Student() : _mName{""} {}
@@ -25,7 +25,7 @@ public:
     {
         _mID = id;
     }
-    std::string getName() const
+    string getName() const
     {
         return _mName;
     }
@@ -60,7 +60,7 @@ public:
     friend istream &operator>>(istream &is, Student &sv)
     {
         printf("Line: %d - Function: %s()\n", __LINE__, __FUNCTION__);
-        std::cout << "Enter SV: " << endl;
+        cout << "Enter SV: " << endl;
         cout << "ID_enter: ", is >> sv._mID;
         while (is.fail())
         {
@@ -262,7 +262,7 @@ public:
     {
         if (mSvList == nullptr)
         {
-            cout << "Not Found! List is Empty!" << std::endl;
+            cout << "Not Found! List is Empty!" << endl;
             return;
         }
         nodeBlock *listSearching = mSvList;
@@ -270,13 +270,13 @@ public:
         {
             if (listSearching->mStudent.getID() == ID_find)
             {
-                cout << "Found ID: " << ID_find << " -- This is Information: " << std::endl;
+                cout << "Found ID: " << ID_find << " -- This is Information: " << endl;
                 cout << listSearching->mStudent;
                 return;
             }
             listSearching = listSearching->next;
         }
-        cout << "Not Found!" << std::endl;
+        cout << "Not Found!" << endl;
     }
 
     /**
@@ -294,7 +294,7 @@ public:
         printf("Line: %d - Function: %s( const string& nameFind )\n", __LINE__, __FUNCTION__);
         if (mSvList == nullptr)
         {
-            cout << "Not Found! List is Empty!" << std::endl;
+            cout << "Not Found! List is Empty!" << endl;
             return;
         }
         nodeBlock *listSearching = mSvList;
@@ -302,13 +302,13 @@ public:
         {
             if (listSearching->mStudent.getName() == nameFind)
             {
-                cout << "Found name: " << nameFind << " -- This is Information: " << std::endl;
+                cout << "Found name: " << nameFind << " -- This is Information: " << endl;
                 cout << listSearching->mStudent;
                 return;
             }
             listSearching = listSearching->next;
         }
-        cout << "Not Found!" << std::endl;
+        cout << "Not Found!" << endl;
     }
 
     /**
@@ -322,7 +322,7 @@ public:
         printf("Line: %d - Function: %s(const int& ID_find)\n", __LINE__, __FUNCTION__);
         if (mSvList == nullptr)
         {
-            cout << "Not Found! List is Empty!" << std::endl;
+            cout << "Not Found! List is Empty!" << endl;
             return;
         }
         nodeBlock *listSearching = mSvList;
@@ -331,7 +331,7 @@ public:
         {
             if (listSearching->mStudent.getID() == ID_find)
             {
-                cout << "Found! This is Information: " << std::endl;
+                cout << "Found! This is Information: " << endl;
                 cout << listSearching->mStudent;
                 return;
             }
@@ -345,7 +345,7 @@ public:
                 listSearching = listSearching->prev;
             }
         }
-        cout << "Not Found!: " << std::endl;
+        cout << "Not Found!: " << endl;
     }
 
 
@@ -366,7 +366,7 @@ public:
         printf("Line: %d - Function: %s( svList == nullptr )\n", __LINE__, __FUNCTION__);
         if (_pos < 0 || _pos > _mSize)
         {
-            throw std::runtime_error("Invalid!");
+            throw runtime_error("Invalid!");
         }
         if (_pos == _mSize)
         {
@@ -481,7 +481,7 @@ public:
         if (mSvList == nullptr)
         {
             printf("Line: %d - Function: %s( svList == nullptr )\n", __LINE__, __FUNCTION__);
-            throw std::runtime_error("Invalid!");
+            throw runtime_error("Invalid!");
         }
         else
         {
@@ -518,7 +518,7 @@ public:
         if (mSvList == nullptr)
         {
             printf("Line: %d - Function: %s( svList == nullptr )\n", __LINE__, __FUNCTION__);
-            throw std::runtime_error("Invalid!");
+            throw runtime_error("Invalid!");
         }
         else
         {
@@ -549,7 +549,7 @@ public:
     {
         if (mSvList == nullptr)
         {
-            std::cout << "Empty list!" << std::endl;
+            cout << "Empty list!" << endl;
             return;
         }
 
@@ -586,10 +586,10 @@ public:
         nodeBlock *List = mSvList;
         while (List != nullptr)
         {
-            std::cout << List->mStudent << std::endl;
+            cout << List->mStudent << endl;
             List = List->next;
         }
-        std::cout << endl;
+        cout << endl;
     }
 };
 
@@ -611,6 +611,7 @@ int main()
     Student sv11(232123135, "Trieu John 11");
     Student sv12;
     cin >> sv12;
+
     //************* PUSHING DATA **************
     cout << "***************************** List 1! **************************" << endl;
     printf("Line: %d - Function: %s()\n", __LINE__, __FUNCTION__);
@@ -631,35 +632,47 @@ int main()
     printf("Line: %d - Function: %s()\n", __LINE__, __FUNCTION__);
 
     // cout << "***************************** List 2! **************************" << endl;
+    // cout << "Test case for pop_back() with list has 1 elem " << endl;
     // svList2->push_front(sv2);
     // svList2->pop_back();
     // svList2->print();
+
     // cout << "***************************** AFTER SORTING ID BY BUBBLE SORT! **************************" << endl;
     // svList->bubbleSortID();
     // svList->print();
 
+
     // cout << "****************** Searching in Bianry Seaching Way of List in ordering! ****************" << endl;
     //  printf("Line: %d - Function: %s( binary searching )\n", __LINE__, __FUNCTION__);
     // svList->binarySearchID(324);
-    // std::cout << std::endl;
+    // cout << endl;
     // printf("Line: %d - Function: %s( binary Searching )\n", __LINE__, __FUNCTION__);
     // svList->binarySearchID(13231);
-    // std::cout << std::endl;
+    // cout << endl;
+
+
     // cout << "****************** Searching in Normal Way of List in ordering! ****************" << endl;
     // printf("Line: %d - Function: %s( Normal Searching )\n", __LINE__, __FUNCTION__);
     // svList->searchID(13231);
-    // std::cout << std::endl;
+    // cout << endl;
+
+    // cout << "name searching case: 1 found and 1 not found! " << endl;
     // printf("Line: %d - Function: %s( Normal Searching )\n", __LINE__, __FUNCTION__);
     // svList->searchName("John 3");
-    // std::cout << std::endl;
+    // cout << endl;
     // svList->searchName("Trieu John 8");
-    // std::cout << std::endl;
+    // cout << endl;
+
+
+    cout << "****************** Inserting by elem which was entered ****************" << endl;
     svList->insert(sv12, 5);
     svList->print();
+
 
     cout << "****************** Removing by ID ****************" << endl;
     svList->remove(66);
     svList->print();
+
 
     cout << "****************** Deallocated All Memories Have Been Allocated ************" << endl;
     if (svList)
