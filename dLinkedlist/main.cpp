@@ -1,5 +1,6 @@
 #include <iostream>
 #include <conio.h>
+#include <vector>
 #include <iomanip>
 #include <string>
 #include <string.h>
@@ -751,6 +752,7 @@ void Exer1to3()
 }
 
 
+
 void Console()
 {
     cout << "**********************CONSOLE MENU***********************" << endl;
@@ -758,6 +760,85 @@ void Console()
     cout << "*               2. Checking Exercise 4                  *" << endl;
     cout << "*               0. Exist                                *" << endl;
     cout << "*********************************************************" << endl;
+}
+
+/** 
+ * @brief       This function do searching first non negative number which is not in array
+ * @algorithm:
+ *              We recorgnize that the first non negative number which is missing never larger than size of array
+ *              If worst case -> that woul be array.size() + 1
+ *              So if arr[i] < 0 || arr[i] > arr.size() => set equal 1
+ *              Using hasing sum to make boundary for this array
+ *                  increase arr[(arr[i]- 1)% n] += n    | n is arr.size()
+ *              Passing whole array - if first elem is <= arr.size() -> return index;
+ *              otherwise, return arr.size() + 1;
+ * @param arr   Vector input
+ * @result      a smallest non-negative number
+**/
+int SearchMinNonNeg(std::vector<int> arr)
+{
+    int _size = arr.size();
+
+    cout << "Input arr: ";
+    for (int idex = 0; idex < _size; idex++)
+    {
+        cout << arr[idex] << " ";
+    }
+    cout << endl;
+
+    
+    bool miss_one = true;
+    // checking 1! - because this is a smallest non negative number
+    for (int idex = 0; idex < _size; idex++)
+    {
+        if (arr[idex] == 1)
+        {
+            miss_one = false;
+            break;
+        }
+    }
+    // if we have no number 1 in array -> return it
+    if (miss_one)
+        return 1;
+
+    for (int idex = 0; idex < _size; idex++)
+    {
+        if (arr[idex] <= 0 || arr[idex] > _size)
+        {
+            arr[idex] = 1;
+        }
+    }
+
+    for (int idex = 0; idex < _size; idex++)
+    {
+        arr[(arr[idex] - 1) % _size] += _size;
+    }
+
+    // checking for the first elem < size -> if so return index + 1
+    for (int idex = 0; idex < _size; idex++)
+    {
+        if (arr[idex] <= _size)
+        {
+            return idex + 1;
+        }
+    }
+
+    // if this array is sorting array and no missing
+    // return size + 1
+    return _size + 1;
+}
+
+void Exer4()
+{
+    vector<int> arr{1,2,3,4,5,8,9,0};
+    vector<int> arr2{2,3,1,-2,-3,-1,-4};
+    vector<int> arr3{1,1000};
+
+
+    
+    cout << "Output res: " << SearchMinNonNeg(arr) << endl << endl;
+    cout << "Output res: " << SearchMinNonNeg(arr2) << endl << endl;
+    cout << "Output res: " << SearchMinNonNeg(arr3) << endl << endl;
 }
 
 int main()
@@ -782,9 +863,18 @@ int main()
         case 1:
             system("cls");
             Exer1to3();
+            cout << endl
+                 << "Take time for looking your output!" << endl;
+            cout << "If you want to return to consol, Type anything to comeback console!" << endl;
+            _getch();
             break;
         case 2:
             system("cls");
+            Exer4();
+            cout << endl
+                 << "Take time for looking your output!" << endl;
+            cout << "If you want to return to consol, Type anything to comeback console!" << endl;
+            _getch();
             break;
         case 0:
             system("cls");
