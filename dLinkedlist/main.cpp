@@ -625,6 +625,11 @@ public:
 };
 
 
+/** 
+     * @brief This function do checking special character in input Name
+     * @param nameCheck input string_Name for checking
+     * @result true if no special character - otherwise false
+    **/
 bool checkName(const string& nameCheck) 
 {
     for (char c : nameCheck)
