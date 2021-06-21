@@ -1,10 +1,11 @@
 #include <iostream>
+#include <conio.h>
 #include <iomanip>
 #include <string>
 #include <string.h>
 #include <limits>
 using namespace std;
-
+bool checkName(const string& nameCheck);
 class Student
 {
     int _mID;
@@ -34,24 +35,6 @@ public:
         _mName = name;
     }
 
-    bool checkName() const
-    {
-        for (char c : _mName)
-        {
-            if (c == ' ')
-                continue;
-            else
-            {
-                if (!((c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')))
-                {
-                    return false;
-                }
-            }
-            
-        }
-        return true;
-    }
-
     friend ostream &operator<<(ostream &os, const Student &sv)
     {
         os << "\tID : " << sv._mID << " ------- Name: " << sv._mName;
@@ -77,7 +60,7 @@ public:
 
         printf("Line: %d - Function: %s()\n", __LINE__, __FUNCTION__);
         cout << "Name_enter: ", getline(is,sv._mName);
-        while (!sv.checkName())
+        while (!checkName(sv._mName))
         {
             cout << "You enter wrong input - Not include special characters!" << endl;
             cout << "Name_enter: ", getline(is,sv._mName,'\n');
@@ -153,6 +136,25 @@ public:
         return _mSize;
     }
 
+    bool isIDExist(const int& _idFind) const
+    {
+        if (mSvList == nullptr)
+        {
+            return false;
+        }
+        nodeBlock* runList = mSvList;
+        while (runList != nullptr)
+        {
+            if (runList->mStudent.getID() == _idFind)
+            {
+                runList = nullptr;
+                return true;
+            }
+            runList = runList->next;
+        }
+        runList = nullptr;
+        return false;
+    }
 
     /**
      * @brief setMiddle - middle pointer point to the middle elem of list
@@ -304,11 +306,13 @@ public:
             {
                 cout << "Found name: " << nameFind << " -- This is Information: " << endl;
                 cout << listSearching->mStudent;
+                listSearching = nullptr;
                 return;
             }
             listSearching = listSearching->next;
         }
         cout << "Not Found!" << endl;
+        listSearching = nullptr;
     }
 
     /**
@@ -368,6 +372,17 @@ public:
         {
             throw runtime_error("Invalid!");
         }
+        if (mSvList == nullptr)
+        {
+            push_back(_student);
+            return;
+        }
+
+        if (isIDExist(_student.getID()))
+        {
+            cout << "Already has this ID!" << endl << endl;
+            return;
+        }
         if (_pos == _mSize)
         {
             push_back(_student);
@@ -376,6 +391,7 @@ public:
         if (_pos == 0)
         {
             push_front(_student);
+            return;
         }
         nodeBlock *newNode = new nodeBlock(_student);
         nodeBlock *prev = nullptr;
@@ -419,7 +435,7 @@ public:
      *              prev = nullptr;
      * @result A list was removed elem has the same input ID
     */
-    void remove(const int &ID_find)
+    void removeByID(const int &ID_find)
     {
         printf("Line: %d - Function: %s( svList == nullptr )\n", __LINE__, __FUNCTION__);
         if (mSvList == nullptr)
@@ -436,26 +452,40 @@ public:
                 // this for last node
                 if (curr->next == nullptr)
                 {
+                    pop_back();
                     prevNode->next = nullptr;
-                    curr->prev = nullptr;
-                    mTail = prevNode;
+                    curr = nullptr;
+                    prevNode = nullptr;
+                    return;
                 }
                 else
                 {
-                    // node is in middle
-                    prevNode->next = curr->next;
-                    curr->next->prev = prevNode;
+                    // for the first node
+                    if (curr->prev == nullptr)
+                    {
+                        pop_front();
+                        prevNode = nullptr;
+                        curr = nullptr;
+                        return;
+                    }
+                    else
+                    {
+                        // node is in middle
+                        prevNode->next = curr->next;
+                        curr->next->prev = prevNode;
+                        delete curr;
+                        curr = nullptr;
+                        prevNode = nullptr;
+                        _mSize--;
+                        if (_mSize == 0)
+                        {
+                            mSvList = nullptr;
+                        }
+                        setMiddle();
+                        return;
+                    } 
                 }
-                delete curr;
-                curr = nullptr;
-                prevNode = nullptr;
-                _mSize--;
-                if (_mSize == 0)
-                {
-                    mSvList = nullptr;
-                }
-                setMiddle();
-                return;
+                
             }
             prevNode = curr;
             curr = curr->next;
@@ -571,6 +601,7 @@ public:
                 List = List->next;
             }
         }
+        List = nullptr;
     }
 
     /** 
@@ -580,7 +611,7 @@ public:
     **/
     void print()
     {
-        cout << "\nPrint List: " << endl;
+        cout << "Print List: " << endl;
         if (mSvList == nullptr)
             return;
         nodeBlock *List = mSvList;
@@ -593,11 +624,29 @@ public:
     }
 };
 
-int main()
+
+bool checkName(const string& nameCheck) 
 {
-    //*********** INTITIALIZING ****************
+    for (char c : nameCheck)
+    {
+        if (c == ' ')
+            continue;
+        else
+        {
+            if (!((c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')))
+            {
+                return false;
+            }
+        }
+        
+    }
+    return true;
+}
+
+void Exer1to3()
+{
+    printf("\n\nLine: %d - Function: %s( svList->next != nullptr )\n\n", __LINE__, __FUNCTION__);
     dLinkedList *svList = new dLinkedList;
-    dLinkedList *svList2 = new dLinkedList;
     Student sv1(23, "Trieu John 1");
     Student sv2(234, "Trieu John 2");
     Student sv3(235, "Trieu John 3");
@@ -608,83 +657,143 @@ int main()
     Student sv8(33532, "Trieu John 8");
     Student sv9(3551, "Trieu John 9");
     Student sv10(23432135, "Trieu John 10");
-    Student sv11(232123135, "Trieu John 11");
-    Student sv12;
-    cin >> sv12;
+    int _idFind;
+    int _idRemove;
+    string _nameFind;
 
-    //************* PUSHING DATA **************
-    cout << "***************************** List 1! **************************" << endl;
-    printf("Line: %d - Function: %s()\n", __LINE__, __FUNCTION__);
+    /* Insert Data */
     svList->push_back(sv1);
     svList->push_back(sv2);
     svList->push_back(sv3);
     svList->push_back(sv4);
-    printf("Line: %d - Function: %s()\n", __LINE__, __FUNCTION__);
-    svList->push_front(sv5);
-    svList->push_front(sv6);
-    svList->push_front(sv7);
+    svList->push_back(sv5);
+    svList->push_back(sv6);
+    svList->push_back(sv7);
+    svList->push_back(sv8);
+    svList->push_back(sv9);
+    svList->push_back(sv10);
+    cout << endl;
+    cout << "*****************List after insert 10 datas*************" << endl;
     svList->print();
-    svList->pop_front();
-    printf("Line: %d - Function: %s()\n", __LINE__, __FUNCTION__);
+    cout << endl;
+    cout << "*****************Using bubble-sort to sort elems by ID - increasingly*************" << endl;
+    svList->bubbleSortID();
     svList->print();
-    printf("Line: %d - Function: %s()\n", __LINE__, __FUNCTION__);
-    svList->insert(sv8, 3);
-    printf("Line: %d - Function: %s()\n", __LINE__, __FUNCTION__);
+    cout << endl;
 
-    // cout << "***************************** List 2! **************************" << endl;
-    // cout << "Test case for pop_back() with list has 1 elem " << endl;
-    // svList2->push_front(sv2);
-    // svList2->pop_back();
-    // svList2->print();
+    /* Search Student by ID */
+    cout << " ****************Search Student by ID***********" << endl;
+    cout << "_idFind -- enter: ", cin >> _idFind;
+    while (cin.fail())
+    {
+        if (cin.fail())
+        {
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(),'\n');
+            cout<< "You have entered wrong input" <<endl;
+            cout << "ID_enter: ", cin >> _idFind;
+        }
+    }
+    cin.ignore(numeric_limits<streamsize>::max(),'\n');
+    cout << endl;
+    cout << " ****************Search Student by ID - in normal way***********" << endl;
+    svList->searchID(_idFind);
+    cout << endl;
+    cout << " ****************Search Student by ID - in binary search way***********" << endl;
+    svList->searchID(_idFind);
+    cout << endl;
 
-    // cout << "***************************** AFTER SORTING ID BY BUBBLE SORT! **************************" << endl;
-    // svList->bubbleSortID();
-    // svList->print();
+    cout << " ****************Search Student by Name***********" << endl;
+    cout << "_idName -- enter: ", getline(cin,_nameFind);
+    while (!checkName(_nameFind))
+    {
+        cout << "You enter wrong input - Not include special characters!" << endl;
+        cout << "Name_enter: ", getline(cin,_nameFind);
+    }
+
+    cout << "name for searching: " << _nameFind << endl;
+    svList->searchName(_nameFind);
+    cout << endl;
 
 
-    // cout << "****************** Searching in Bianry Seaching Way of List in ordering! ****************" << endl;
-    //  printf("Line: %d - Function: %s( binary searching )\n", __LINE__, __FUNCTION__);
-    // svList->binarySearchID(324);
-    // cout << endl;
-    // printf("Line: %d - Function: %s( binary Searching )\n", __LINE__, __FUNCTION__);
-    // svList->binarySearchID(13231);
-    // cout << endl;
-
-
-    // cout << "****************** Searching in Normal Way of List in ordering! ****************" << endl;
-    // printf("Line: %d - Function: %s( Normal Searching )\n", __LINE__, __FUNCTION__);
-    // svList->searchID(13231);
-    // cout << endl;
-
-    // cout << "name searching case: 1 found and 1 not found! " << endl;
-    // printf("Line: %d - Function: %s( Normal Searching )\n", __LINE__, __FUNCTION__);
-    // svList->searchName("John 3");
-    // cout << endl;
-    // svList->searchName("Trieu John 8");
-    // cout << endl;
-
-
-    cout << "****************** Inserting by elem which was entered ****************" << endl;
-    svList->insert(sv12, 5);
+    cout << " ****************Remove Student by ID***********" << endl;
+    cout << "_idRemove -- enter: ", cin >> _idRemove;
+    while (cin.fail())
+    {
+        if (cin.fail())
+        {
+            // chear buffer
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(),'\n');
+            cout<< "You have entered wrong input" <<endl;
+            cout << "ID_enter: ", cin >> _idRemove;
+        }
+    }
+    cin.ignore(numeric_limits<streamsize>::max(),'\n');
+    svList->removeByID(_idRemove);
+    cout << endl;
+    cout << "*****************After removing******************" << endl;
     svList->print();
 
 
-    cout << "****************** Removing by ID ****************" << endl;
-    svList->remove(66);
-    svList->print();
 
-
-    cout << "****************** Deallocated All Memories Have Been Allocated ************" << endl;
+    svList->insert(sv6,2);
     if (svList)
     {
         delete svList;
         svList = nullptr;
     }
-    if (svList2)
+}
+
+
+void Console()
+{
+    cout << "**********************CONSOLE MENU***********************" << endl;
+    cout << "*               1. Checking Exercise 1 to 3             *" << endl;
+    cout << "*               2. Checking Exercise 4                  *" << endl;
+    cout << "*               0. Exist                                *" << endl;
+    cout << "*********************************************************" << endl;
+}
+
+int main()
+{
+    int _choice{};
+
+    while (1)
     {
-        delete svList2;
-        svList2 = nullptr;
+        system("cls");
+        Console();
+        cout << "Enter choice:", cin >> _choice;
+        while (cin.fail())
+        {
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(),'\n');
+            cout << "Error type of in put! just number!" << endl;
+            cout << "Enter choice again: ", cin >> _choice;
+        }
+        cin.ignore(numeric_limits<streamsize>::max(),'\n');
+        switch (_choice)
+        {
+        case 1:
+            system("cls");
+            Exer1to3();
+            break;
+        case 2:
+            system("cls");
+            break;
+        case 0:
+            system("cls");
+            cout << "Bye bye!!!!!!!";
+            return 0;
+        default:
+            system("cls");
+            cout << "What do you mean? We have no option for that one!" << endl;
+            cout << "Type anything to comeback console!" << endl;
+            _getch();
+            break;
+        }
     }
+
     printf("Line: %d - Function: %s( End of Main! )\n", __LINE__, __FUNCTION__);
     return 0;
 }
