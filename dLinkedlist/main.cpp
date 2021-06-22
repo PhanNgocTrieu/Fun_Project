@@ -1,20 +1,24 @@
 #include <iostream>
 #include <conio.h>
-#include <vector>
 #include <iomanip>
 #include <string>
 #include <string.h>
 #include <limits>
+#include <vector>
+#include <algorithm>
+
 using namespace std;
-bool checkName(const string& nameCheck);
+
+bool checkName(const string &nameCheck);
 class Student
 {
     int _mID;
     string _mName;
+    int _mAge;
 
 public:
     Student() : _mName{""} {}
-    Student(const int &_ID, const string &name) : _mID{_ID}, _mName{name} {}
+    Student(const int &_ID, const string &name, const int &age) : _mID{_ID}, _mName{name}, _mAge{age} {}
     Student(const Student &sv) : _mID{sv._mID}, _mName{sv._mName} {}
     ~Student()
     {
@@ -36,9 +40,19 @@ public:
         _mName = name;
     }
 
+    void setAge(const int &age)
+    {
+        _mAge = age;
+    }
+
+    int getAge() const
+    {
+        return _mAge;
+    }
+
     friend ostream &operator<<(ostream &os, const Student &sv)
     {
-        os << "\tID : " << sv._mID << " ------- Name: " << sv._mName;
+        os << "\tID : " << sv._mID << " ------- Name: " << sv._mName << " -------- Age: " << sv._mAge;
         return os;
     }
     friend istream &operator>>(istream &is, Student &sv)
@@ -51,20 +65,20 @@ public:
             if (is.fail())
             {
                 is.clear();
-                cin.ignore(numeric_limits<streamsize>::max(),'\n');
-                cout<< "You have entered wrong input" <<endl;
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                cout << "You have entered wrong input" << endl;
                 cout << "ID_enter: ", is >> sv._mID;
             }
         }
         // clear buffer
-        cin.ignore(numeric_limits<streamsize>::max(),'\n');
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
 
         printf("Line: %d - Function: %s()\n", __LINE__, __FUNCTION__);
-        cout << "Name_enter: ", getline(is,sv._mName);
+        cout << "Name_enter: ", getline(is, sv._mName);
         while (!checkName(sv._mName))
         {
             cout << "You enter wrong input - Not include special characters!" << endl;
-            cout << "Name_enter: ", getline(is,sv._mName,'\n');
+            cout << "Name_enter: ", getline(is, sv._mName, '\n');
         }
         is.sync();
         return is;
@@ -94,6 +108,7 @@ protected:
             }
         }
     };
+
     nodeBlock *mSvList;
     nodeBlock *mMiddle;
     nodeBlock *mTail;
@@ -104,7 +119,7 @@ public:
     dLinkedList(const dLinkedList &svList) : mSvList{svList.mSvList}, mMiddle{svList.mMiddle}, mTail{svList.mTail}, _mSize{svList._mSize} {}
     ~dLinkedList()
     {
-        printf("Line: %d - Function: %s()\n", __LINE__, __FUNCTION__);
+        printf("Line: %d - Function: %s( Start destructor function)\n", __LINE__, __FUNCTION__);
         if (mSvList)
         {
             while (mTail != nullptr && mTail->prev != nullptr)
@@ -137,13 +152,13 @@ public:
         return _mSize;
     }
 
-    bool isIDExist(const int& _idFind) const
+    bool isIDExist(const int &_idFind) const
     {
         if (mSvList == nullptr)
         {
             return false;
         }
-        nodeBlock* runList = mSvList;
+        nodeBlock *runList = mSvList;
         while (runList != nullptr)
         {
             if (runList->mStudent.getID() == _idFind)
@@ -160,27 +175,40 @@ public:
     /**
      * @brief setMiddle - middle pointer point to the middle elem of list
      * @algorithm: 
-     *          passing to middle of list
-     *          middle = curr (middle of list)
-     * @result Print infors if true - otherwise "Not Found"
+     *          using 2 step:
+     *          when (fast != nullptr)
+     *              slow : goes 1 step
+     *              fast : goes 2 steps
+     *     
+     *          
+     * @result set Middle Pointer to the middle node of list
     */
     void setMiddle()
     {
         printf("Line: %d - Function: %s()\n", __LINE__, __FUNCTION__);
+
         if (mSvList == nullptr)
         {
             mMiddle = nullptr;
         }
-        nodeBlock *List = mSvList;
-        int iDex = 1;
-        int _limit = _mSize / 2;
-        while (iDex < _limit && List->next != nullptr)
+        nodeBlock *slow = mSvList;
+        nodeBlock *fast = mSvList->next;
+
+        // handling finding middle node
+        do
         {
-            List = List->next;
-            iDex++;
-        }
-        mMiddle = List;
-        List = nullptr;
+            while (fast != mTail)
+            {
+                fast = fast->next;
+                if (fast != mTail)
+                {
+                    slow = slow->next;
+                    fast = fast->next;
+                }
+            }
+        } while (0);
+
+        mMiddle = slow;
     }
 
     /**
@@ -189,34 +217,49 @@ public:
      *          newNode->prev = tail
      *          tail->next = newNode
      *          tail = newNode
-     *          head = newNode (make head point to the first elem of list)
-     * @result Print infors if true - otherwise "Not Found"
+     * @result A list was added a node at back
     */
     void push_back(const Student &_student)
     {
         printf("Line: %d - Function: %s( const Student &_student )\n", __LINE__, __FUNCTION__);
-        nodeBlock *newNode = new nodeBlock();
-        newNode->mStudent = _student;
-        newNode->next = nullptr;
 
-        if (mSvList == nullptr)
+        /**
+         *  Handling with pushing an elem at back of list
+         *     
+         *      elem1 -> elem2 > elem3 -> elem4 -> nullptr
+         *      ^                            ^
+         *      |                            |
+         *     head                        mTail 
+         * 
+         *  newElem = elem5 : elem5 -> next = nullptr
+         *  
+         *   mTail -> next = newElem
+        */
+        do
         {
-            newNode->prev = nullptr;
-            this->mSvList = newNode;
-            mTail = mSvList;
-            mMiddle = mSvList;
-            _mSize++;
-            newNode = nullptr;
-            return;
-        }
-        newNode->prev = mTail;
-        mTail->next = newNode;
-        mTail = newNode;
-        setMiddle();
-        _mSize++;
+            nodeBlock *newNode = new nodeBlock();
+            newNode->mStudent = _student;
+            newNode->next = nullptr;
 
-        // newNode points to null
-        newNode = nullptr;
+            if (mSvList == nullptr)
+            {
+                newNode->prev = nullptr;
+                this->mSvList = newNode;
+                mTail = mSvList;
+                mMiddle = mSvList;
+                _mSize++;
+                newNode = nullptr;
+                return;
+            }
+            newNode->prev = mTail;
+            mTail->next = newNode;
+            mTail = newNode;
+            setMiddle();
+            _mSize++;
+
+            // newNode points to null
+            newNode = nullptr;
+        } while (0);
     }
 
     /**
@@ -226,29 +269,36 @@ public:
      *          newNode->next = head
      *          head->prev = newNode
      *          head = newNode (make head point to the first elem of list)
-     * @result Print infors if true - otherwise "Not Found"
+     * @result A list was added a node at front
     */
     void push_front(const Student &_student)
     {
         printf("Line: %d - Function: %s( const Student& _student )\n", __LINE__, __FUNCTION__);
-        nodeBlock *newNode = new nodeBlock();
-        newNode->mStudent = _student;
-        newNode->prev = nullptr; // push front -> this one always be nullptr
-        if (mSvList == nullptr)
+
+        // Handling with a front elem to push in
+        do
         {
-            newNode->next = nullptr;
-            mSvList = newNode;
-            mTail = mSvList;
-            mMiddle = mSvList;
-            _mSize++;
-        }
-        else
-        {
-            newNode->next = mSvList;
-            mSvList->prev = newNode;
-            mSvList = newNode;
-            _mSize++;
-        }
+            nodeBlock *newNode = new nodeBlock();
+            newNode->mStudent = _student;
+            newNode->prev = nullptr; // push front -> this one always be nullptr
+            if (mSvList == nullptr)
+            {
+                newNode->next = nullptr;
+                mSvList = newNode;
+                mTail = mSvList;
+                mMiddle = mSvList;
+                _mSize++;
+            }
+            else
+            {
+                newNode->next = mSvList;
+                mSvList->prev = newNode;
+                mSvList = newNode;
+                _mSize++;
+            }
+
+        } while (0);
+
         setMiddle();
         printf("Line: %d - Function: %s( const Student& _student )\n", __LINE__, __FUNCTION__);
     }
@@ -275,11 +325,13 @@ public:
             {
                 cout << "Found ID: " << ID_find << " -- This is Information: " << endl;
                 cout << listSearching->mStudent;
+                listSearching = nullptr;
                 return;
             }
             listSearching = listSearching->next;
         }
         cout << "Not Found!" << endl;
+        listSearching = nullptr;
     }
 
     /**
@@ -300,20 +352,25 @@ public:
             cout << "Not Found! List is Empty!" << endl;
             return;
         }
-        nodeBlock *listSearching = mSvList;
-        while (listSearching != nullptr)
+
+        // Searching name
+        do
         {
-            if (listSearching->mStudent.getName() == nameFind)
+            nodeBlock *listSearching = mSvList;
+            while (listSearching != nullptr)
             {
-                cout << "Found name: " << nameFind << " -- This is Information: " << endl;
-                cout << listSearching->mStudent;
-                listSearching = nullptr;
-                return;
+                if (listSearching->mStudent.getName() == nameFind)
+                {
+                    cout << "Found name: " << nameFind << " -- This below is Information: " << endl;
+                    cout << listSearching->mStudent;
+                    listSearching = nullptr;
+                    return;
+                }
+                listSearching = listSearching->next;
             }
-            listSearching = listSearching->next;
-        }
-        cout << "Not Found!" << endl;
-        listSearching = nullptr;
+            cout << "Not Found!" << endl;
+            listSearching = nullptr;
+        } while (0);
     }
 
     /**
@@ -324,35 +381,43 @@ public:
     */
     void binarySearchID(const int &ID_find)
     {
-        printf("Line: %d - Function: %s(const int& ID_find)\n", __LINE__, __FUNCTION__);
+        // List is Empty
         if (mSvList == nullptr)
         {
-            cout << "Not Found! List is Empty!" << endl;
             return;
         }
-        nodeBlock *listSearching = mSvList;
-
-        while (listSearching != nullptr)
+        dLinkedList *runList = this;
+        while (runList->mSvList != runList->mTail)
         {
-            if (listSearching->mStudent.getID() == ID_find)
+            runList->setMiddle();
+            if (runList->mMiddle->mStudent.getID() == ID_find)
             {
-                cout << "Found! This is Information: " << endl;
-                cout << listSearching->mStudent;
+                cout << "Found! This below informations!" << endl;
+                cout << runList->mMiddle->mStudent;
                 return;
             }
 
-            if (listSearching->mStudent.getID() < ID_find)
+            if (runList->mMiddle->mStudent.getID() < ID_find)
             {
-                listSearching = listSearching->next;
+                runList->mSvList = runList->mMiddle->next;
             }
-            if (listSearching->mStudent.getID() > ID_find)
+
+            if (runList->mMiddle->mStudent.getID() > ID_find)
             {
-                listSearching = listSearching->prev;
+                runList->mTail = runList->mMiddle;
             }
         }
-        cout << "Not Found!: " << endl;
+        if (runList->mSvList == runList->mTail)
+        {
+            cout << "Found! This below informations!" << endl;
+            cout << runList->mMiddle->mStudent;
+            return;
+        }
+        else
+        {
+            cout << "Not Found!" << endl;
+        }
     }
-
 
     /**
      * @brief   Insert - inserting elem which is @a _pos position
@@ -368,54 +433,61 @@ public:
     */
     void insert(const Student &_student, const int &_pos)
     {
-        printf("Line: %d - Function: %s( svList == nullptr )\n", __LINE__, __FUNCTION__);
-        if (_pos < 0 || _pos > _mSize)
-        {
-            throw runtime_error("Invalid!");
-        }
-        if (mSvList == nullptr)
-        {
-            push_back(_student);
-            return;
-        }
+        printf("Line: %d - Function: %s( Start Function )\n", __LINE__, __FUNCTION__);
 
-        if (isIDExist(_student.getID()))
+        // Checking conditions
+        do
         {
-            cout << "Already has this ID!" << endl << endl;
-            return;
-        }
-        if (_pos == _mSize)
-        {
-            push_back(_student);
-            return;
-        }
-        if (_pos == 0)
-        {
-            push_front(_student);
-            return;
-        }
-        nodeBlock *newNode = new nodeBlock(_student);
-        nodeBlock *prev = nullptr;
-        nodeBlock *listMove = mSvList;
-        int i = 1;
-        while (i < _pos)
-        {
-            i++;
-            prev = listMove;
-            listMove = listMove->next;
-        }
-        prev->next = newNode;
-        newNode->prev = prev;
-        newNode->next = listMove;
-        listMove->prev = newNode;
+            if (_pos < 0 || _pos > _mSize)
+            {
+                throw runtime_error("Invalid!");
+            }
+            if (isIDExist(_student.getID()))
+            {
+                cout << "Already has this ID!" << endl
+                     << endl;
+                return;
+            }
+            if (_pos == _mSize)
+            {
+                push_back(_student);
+                return;
+            }
+            if (_pos == 0)
+            {
+                push_front(_student);
+                return;
+            }
+        } while (0);
 
-        // clear pointers
-        prev = nullptr;
-        listMove = nullptr;
-        newNode = nullptr;
+        // Handling Inserting An Elem
+        do
+        {
+            nodeBlock *newNode = new nodeBlock(_student);
+            nodeBlock *prev = nullptr;
+            nodeBlock *listMove = mSvList;
+            int i = 1;
+            while (i < _pos)
+            {
+                i++;
+                prev = listMove;
+                listMove = listMove->next;
+            }
+            prev->next = newNode;
+            newNode->prev = prev;
+            newNode->next = listMove;
+            listMove->prev = newNode;
 
-        _mSize++;
-        setMiddle();
+            // clear pointers
+            prev = nullptr;
+            listMove = nullptr;
+            newNode = nullptr;
+
+            _mSize++;
+            setMiddle();
+        } while (0);
+
+        printf("Line: %d - Function: %s( End of Function )\n", __LINE__, __FUNCTION__);
     }
 
     /**
@@ -438,62 +510,69 @@ public:
     */
     void removeByID(const int &ID_find)
     {
-        printf("Line: %d - Function: %s( svList == nullptr )\n", __LINE__, __FUNCTION__);
+        printf("Line: %d - Function: %s( Start Function )\n", __LINE__, __FUNCTION__);
+
+        // checking for null
         if (mSvList == nullptr)
         {
             cout << "Not Found! Empty List!" << endl;
             return;
         }
-        nodeBlock *prevNode = nullptr;
-        nodeBlock *curr = mSvList;
-        while (curr != nullptr)
+
+        // Handling remove an elem in position of _pos
+        do
         {
-            if (curr->mStudent.getID() == ID_find)
+            nodeBlock *prevNode = nullptr;
+            nodeBlock *curr = mSvList;
+            while (curr != nullptr)
             {
-                // this for last node
-                if (curr->next == nullptr)
+                if (curr->mStudent.getID() == ID_find)
                 {
-                    pop_back();
-                    prevNode->next = nullptr;
-                    curr = nullptr;
-                    prevNode = nullptr;
-                    return;
-                }
-                else
-                {
-                    // for the first node
-                    if (curr->prev == nullptr)
+                    // this for last node
+                    if (curr->next == nullptr)
                     {
-                        pop_front();
-                        prevNode = nullptr;
+                        pop_back();
+                        prevNode->next = nullptr;
                         curr = nullptr;
+                        prevNode = nullptr;
                         return;
                     }
                     else
                     {
-                        // node is in middle
-                        prevNode->next = curr->next;
-                        curr->next->prev = prevNode;
-                        delete curr;
-                        curr = nullptr;
-                        prevNode = nullptr;
-                        _mSize--;
-                        if (_mSize == 0)
+                        // for the first node
+                        if (curr->prev == nullptr)
                         {
-                            mSvList = nullptr;
+                            pop_front();
+                            prevNode = nullptr;
+                            curr = nullptr;
+                            return;
                         }
-                        setMiddle();
-                        return;
-                    } 
+                        else
+                        {
+                            // node is in middle
+                            prevNode->next = curr->next;
+                            curr->next->prev = prevNode;
+                            delete curr;
+                            curr = nullptr;
+                            prevNode = nullptr;
+                            _mSize--;
+                            if (_mSize == 0)
+                            {
+                                mSvList = nullptr;
+                            }
+                            setMiddle();
+                            printf("Line: %d - Function: %s( Out of Function )\n", __LINE__, __FUNCTION__);
+                            return;
+                        }
+                    }
                 }
-                
+                prevNode = curr;
+                curr = curr->next;
             }
-            prevNode = curr;
-            curr = curr->next;
-        }
-        cout << "Not Found!" << endl;
-        prevNode = nullptr;
-        curr = nullptr;
+            cout << "Not Found!" << endl;
+        } while (0);
+
+        printf("Line: %d - Function: %s( End of Function )\n", __LINE__, __FUNCTION__);
     }
 
     /**
@@ -517,17 +596,22 @@ public:
         else
         {
             printf("Line: %d - Function: %s( svList->next != nullptr )\n", __LINE__, __FUNCTION__);
-            nodeBlock *saveNode = this->mTail;
-            mTail = mTail->prev;
-            saveNode->next = nullptr;
-            saveNode->prev = nullptr;
-            delete saveNode;
-            saveNode = nullptr;
-            _mSize--;
-            if (_mSize == 0)
+
+            // Handling a last elem
+            do
             {
-                mSvList = nullptr;
-            }
+                nodeBlock *saveNode = this->mTail;
+                mTail = mTail->prev;
+                saveNode->next = nullptr;
+                saveNode->prev = nullptr;
+                delete saveNode;
+                saveNode = nullptr;
+                _mSize--;
+                if (_mSize == 0)
+                {
+                    mSvList = nullptr;
+                }
+            } while (0);
         }
         setMiddle();
         printf("Line: %d - Function: %s( Out of Pop_back() )\n", __LINE__, __FUNCTION__);
@@ -554,17 +638,22 @@ public:
         else
         {
             printf("Line: %d - Function: %s( svList->next != nullptr )\n", __LINE__, __FUNCTION__);
-            nodeBlock *saveNode = this->mSvList;
-            mSvList = mSvList->next;
-            saveNode->next = nullptr;
-            saveNode->prev = nullptr;
-            delete saveNode;
-            saveNode = nullptr;
-            _mSize--;
-            if (_mSize == 0)
+
+            // Handling with a first elem
+            do
             {
-                mSvList = nullptr;
-            }
+                nodeBlock *saveNode = this->mSvList;
+                mSvList = mSvList->next;
+                saveNode->next = nullptr;
+                saveNode->prev = nullptr;
+                delete saveNode;
+                saveNode = nullptr;
+                _mSize--;
+                if (_mSize == 0)
+                {
+                    mSvList = nullptr;
+                }
+            } while (0);
         }
         setMiddle();
         printf("Line: %d - Function: %s( Out of Pop_front() )\n", __LINE__, __FUNCTION__);
@@ -603,6 +692,7 @@ public:
             }
         }
         List = nullptr;
+        setMiddle();
     }
 
     /** 
@@ -625,13 +715,12 @@ public:
     }
 };
 
-
 /** 
-     * @brief This function do checking special character in input Name
-     * @param nameCheck input string_Name for checking
-     * @result true if no special character - otherwise false
-    **/
-bool checkName(const string& nameCheck)
+ * @brief This function do checking special character in input Name
+ * @param nameCheck input string_Name for checking
+ * @result true if no special character - otherwise false
+**/
+bool checkName(const string &nameCheck)
 {
     for (char c : nameCheck)
     {
@@ -644,114 +733,144 @@ bool checkName(const string& nameCheck)
                 return false;
             }
         }
-        
     }
     return true;
 }
 
-void Exer1to3()
+void exerciseFrom1To3()
 {
-    printf("\n\nLine: %d - Function: %s( svList->next != nullptr )\n\n", __LINE__, __FUNCTION__);
-    dLinkedList *svList = new dLinkedList;
-    Student sv1(23, "Trieu John 1");
-    Student sv2(234, "Trieu John 2");
-    Student sv3(235, "Trieu John 3");
-    Student sv4(66, "Trieu John 4");
-    Student sv5(13231, "Trieu John 5");
-    Student sv6(324, "Trieu John 6");
-    Student sv7(43, "Trieu John 7");
-    Student sv8(33532, "Trieu John 8");
-    Student sv9(3551, "Trieu John 9");
-    Student sv10(23432135, "Trieu John 10");
+    printf("\n\nLine: %d - Function: %s( ...............  )\n\n", __LINE__, __FUNCTION__);
     int _idFind;
     int _idRemove;
     string _nameFind;
+    dLinkedList *svList = new dLinkedList;
+    // make list of student
+    Student sv1(23, "Trieu John 1", 23);
+    Student sv2(234, "Trieu John 2", 18);
+    Student sv3(235, "Trieu John 3", 19);
+    Student sv4(66, "Trieu John 4", 20);
+    Student sv5(13231, "Trieu John 5", 21);
+    Student sv6(324, "Trieu John 6", 22);
+    Student sv7(43, "Trieu John 7", 17);
+    Student sv8(33532, "Trieu John 8", 24);
+    Student sv9(3551, "Trieu John 9", 25);
+    Student sv10(23432135, "Trieu John 10", 26);
+    Student sv11(4132, "Trieu John 11", 23);
 
     /* Insert Data */
-    svList->push_back(sv1);
-    svList->push_back(sv2);
-    svList->push_back(sv3);
-    svList->push_back(sv4);
-    svList->push_back(sv5);
-    svList->push_back(sv6);
-    svList->push_back(sv7);
-    svList->push_back(sv8);
-    svList->push_back(sv9);
-    svList->push_back(sv10);
-    cout << endl;
-    cout << "*****************List after insert 10 datas*************" << endl;
-    svList->print();
-    cout << endl;
-    cout << "*****************Using bubble-sort to sort elems by ID - increasingly*************" << endl;
-    svList->bubbleSortID();
-    svList->print();
-    cout << endl;
-
-    /* Search Student by ID */
-    cout << " ****************Search Student by ID***********" << endl;
-    cout << "_idFind -- enter: ", cin >> _idFind;
-    while (cin.fail())
+    do
     {
-        if (cin.fail())
+        svList->push_back(sv1);
+        svList->push_back(sv2);
+        svList->push_back(sv3);
+        svList->push_back(sv4);
+        svList->push_back(sv5);
+        svList->push_back(sv6);
+        svList->push_front(sv7);
+        svList->push_back(sv8);
+        svList->push_front(sv9);
+        svList->push_back(sv10);
+    } while (0);
+
+    // Test case for sorting list with buble sort.
+    do
+    {
+        cout << endl;
+        cout << "*****************List after insert 10 datas*************" << endl;
+        svList->print();
+        cout << endl;
+        cout << "*****************Using bubble-sort to sort elems by ID - increasingly*************" << endl;
+        svList->bubbleSortID();
+        svList->print();
+        cout << endl;
+    } while (0);
+
+    // test cast for searching ID - in normal way and binary way
+    do
+    {
+        cout << " ****************Search Student by ID***********" << endl;
+        cout << "_idFind -- enter: ", cin >> _idFind;
+        while (cin.fail())
         {
-            cin.clear();
-            cin.ignore(numeric_limits<streamsize>::max(),'\n');
-            cout<< "You have entered wrong input" <<endl;
-            cout << "ID_enter: ", cin >> _idFind;
+            if (cin.fail())
+            {
+                cin.clear();
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                cout << "You have entered wrong input" << endl;
+                cout << "ID_enter: ", cin >> _idFind;
+            }
         }
-    }
-    cin.ignore(numeric_limits<streamsize>::max(),'\n');
-    cout << endl;
-    cout << " ****************Search Student by ID - in normal way***********" << endl;
-    svList->searchID(_idFind);
-    cout << endl;
-    cout << " ****************Search Student by ID - in binary search way***********" << endl;
-    svList->searchID(_idFind);
-    cout << endl;
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        cout << endl;
+        cout << " ****************Search Student by ID - in normal way***********" << endl;
+        svList->searchID(_idFind);
+        cout << endl;
+        cout << "Binary Searching Way" << endl;
+        svList->binarySearchID(_idFind);
+        cout << endl;
 
-    cout << " ****************Search Student by Name***********" << endl;
-    cout << "_idName -- enter: ", getline(cin,_nameFind);
-    while (!checkName(_nameFind))
+    } while (0);
+
+    //Test cases for searching name function
+    do
     {
-        cout << "You enter wrong input - Not include special characters!" << endl;
-        cout << "Name_enter: ", getline(cin,_nameFind);
-    }
-
-    cout << "name for searching: " << _nameFind << endl;
-    svList->searchName(_nameFind);
-    cout << endl;
-
-
-    cout << " ****************Remove Student by ID***********" << endl;
-    cout << "_idRemove -- enter: ", cin >> _idRemove;
-    while (cin.fail())
-    {
-        if (cin.fail())
+        cout << " ****************Search Student by ID - in normal way***********" << endl;
+        cout << "_idName -- enter: ", getline(cin, _nameFind);
+        while (!checkName(_nameFind))
         {
-            // chear buffer
-            cin.clear();
-            cin.ignore(numeric_limits<streamsize>::max(),'\n');
-            cout<< "You have entered wrong input" <<endl;
-            cout << "ID_enter: ", cin >> _idRemove;
+            cout << "You enter wrong input - Not include special characters!" << endl;
+            cout << "Name_enter: ", getline(cin, _nameFind);
         }
-    }
-    cin.ignore(numeric_limits<streamsize>::max(),'\n');
-    svList->removeByID(_idRemove);
-    cout << endl;
-    cout << "*****************After removing******************" << endl;
-    svList->print();
 
+        cout << "name for searching: " << _nameFind << endl;
+        svList->searchName(_nameFind);
+        cout << endl;
+    } while (0);
 
-
-    svList->insert(sv6,2);
-    if (svList)
+    // Test cases for remove function
+    do
     {
-        delete svList;
-        svList = nullptr;
-    }
+        cout << " ****************Remove Student by ID***********" << endl;
+        cout << "_idRemove -- enter: ", cin >> _idRemove;
+        while (cin.fail())
+        {
+            if (cin.fail())
+            {
+                // clear buffer
+                cin.clear();
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                cout << "You have entered wrong input" << endl;
+                cout << "ID_enter: ", cin >> _idRemove;
+            }
+        }
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        svList->removeByID(_idRemove);
+        cout << endl;
+        cout << "*****************After removing******************" << endl;
+        svList->print();
+    } while (0);
+
+    // Test cases for insert function
+    do
+    {
+        svList->insert(sv6, 2); // Already Exist
+        svList->insert(sv11,5); // Work Fine!
+        //svList->insert(sv8, 15); // runtime error -- turn off comment for checking
+        cout << "*****************After Inserting******************" << endl;
+        svList->print();
+    } while (0);
+
+    // Deallocated svList
+    do
+    {
+
+        if (svList)
+        {
+            delete svList;
+            svList = nullptr;
+        }
+    } while (0);
 }
-
-
 
 void Console()
 {
@@ -786,7 +905,6 @@ int SearchMinNonNeg(std::vector<int> arr)
     }
     cout << endl;
 
-    
     bool miss_one = true;
     // checking 1! - because this is a smallest non negative number
     for (int idex = 0; idex < _size; idex++)
@@ -828,65 +946,84 @@ int SearchMinNonNeg(std::vector<int> arr)
     return _size + 1;
 }
 
-void Exer4()
+void exercise4()
 {
-    vector<int> arr{1,2,3,4,5,8,9,0};
-    vector<int> arr2{2,3,1,-2,-3,-1,-4};
-    vector<int> arr3{1,1000};
+    // test cases:
+    vector<int> arr{1, 2, 3, 4, 5, 8, 9, 0};
+    vector<int> arr2{2, 3, 1, -2, -3, -1, -4};
+    vector<int> arr3{1, 1000};
 
-
-    
-    cout << "Output res: " << SearchMinNonNeg(arr) << endl << endl;
-    cout << "Output res: " << SearchMinNonNeg(arr2) << endl << endl;
-    cout << "Output res: " << SearchMinNonNeg(arr3) << endl << endl;
+    // Fining non-negative number which is not in arrays
+    do
+    {
+        cout << "Output res: " << SearchMinNonNeg(arr) << endl
+             << endl;
+        cout << "Output res: " << SearchMinNonNeg(arr2) << endl
+             << endl;
+        cout << "Output res: " << SearchMinNonNeg(arr3) << endl
+             << endl;
+    } while (0);
 }
 
 int main()
 {
     int _choice{};
 
+    // Console Program Running
     while (1)
     {
         system("cls");
         Console();
-        cout << "Enter choice:", cin >> _choice;
-        while (cin.fail())
+
+        // Enter choice
+        do
         {
-            cin.clear();
-            cin.ignore(numeric_limits<streamsize>::max(),'\n');
-            cout << "Error type of in put! just number!" << endl;
-            cout << "Enter choice again: ", cin >> _choice;
-        }
-        cin.ignore(numeric_limits<streamsize>::max(),'\n');
-        switch (_choice)
+            cout << "Enter choice: ", cin >> _choice;
+            while (cin.fail())
+            {
+                cin.clear();
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                cout << "Error type of in put! just number!" << endl;
+                cout << "Enter choice again: ", cin >> _choice;
+            }
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        } while (0);
+
+        // Handle choices
+        do
         {
-        case 1:
-            system("cls");
-            Exer1to3();
-            cout << endl
-                 << "Take time for looking your output!" << endl;
-            cout << "If you want to return to consol, Type anything to comeback console!" << endl;
-            _getch();
-            break;
-        case 2:
-            system("cls");
-            Exer4();
-            cout << endl
-                 << "Take time for looking your output!" << endl;
-            cout << "If you want to return to consol, Type anything to comeback console!" << endl;
-            _getch();
-            break;
-        case 0:
-            system("cls");
-            cout << "Bye bye!!!!!!!";
-            return 0;
-        default:
-            system("cls");
-            cout << "What do you mean? We have no option for that one!" << endl;
-            cout << "Type anything to comeback console!" << endl;
-            _getch();
-            break;
-        }
+            switch (_choice)
+            {
+            case 1:
+                system("cls");
+                 exerciseFrom1To3();
+                cout << endl
+                    << "Take time for looking your output!" << endl;
+                cout << "If you want to return to consol, Type anything to comeback console!" << endl;
+                _getch();
+                break;
+            case 2:
+                system("cls");
+                exercise4();
+                cout << endl
+                    << "Take time for looking your output!" << endl;
+                cout << "If you want to return to consol, Type anything to comeback console!" << endl;
+                _getch();
+                break;
+            case 0:
+                system("cls");
+                cout << "Bye bye!!!!!!!";
+                return 0;
+
+            default:
+                system("cls");
+                cout << "What do you mean? We have no option for that one!" << endl;
+                cout << "Type anything to comeback console!" << endl;
+                _getch();
+                break;
+            }
+        } while (0);
+
     }
 
     printf("Line: %d - Function: %s( End of Main! )\n", __LINE__, __FUNCTION__);
