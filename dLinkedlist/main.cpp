@@ -19,7 +19,7 @@ class Student
 public:
     Student() : _mName{""} {}
     Student(const int &_ID, const string &name, const int &age) : _mID{_ID}, _mName{name}, _mAge{age} {}
-    Student(const Student &sv) : _mID{sv._mID}, _mName{sv._mName} {}
+    Student(const Student &sv) : _mID{sv._mID}, _mName{sv._mName}, _mAge{sv._mAge} {}
     ~Student()
     {
     }
@@ -81,7 +81,37 @@ public:
             cout << "Name_enter: ", getline(is, sv._mName, '\n');
         }
         is.sync();
+
+        cout << "Age_Enter: ", is >> sv._mAge;
+        while (is.fail())
+        {
+            if (is.fail())
+            {
+                is.clear();
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                cout << "You have entered wrong input" << endl;
+                cout << "Age_Enter: ", is >> sv._mAge;
+            }
+        }
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+
         return is;
+    }
+
+    bool nameCompare(const string &name)
+    {
+        if (_mName.length() != name.length())
+        {
+            return false;
+        }
+
+        for (int index = 0; index < _mName.length(); index++)
+        {
+            if (_mName[index] != name[index])
+                return false;
+        }
+
+        return true;
     }
 };
 
@@ -106,6 +136,13 @@ protected:
             {
                 prev = nullptr;
             }
+        }
+
+        bool operator==(nullptr_t)
+        {
+            if (this == nullptr)
+                return true;
+            return false;
         }
     };
 
@@ -222,7 +259,6 @@ public:
     void push_back(const Student &_student)
     {
         printf("Line: %d - Function: %s( const Student &_student )\n", __LINE__, __FUNCTION__);
-
         /**
          *  Handling with pushing an elem at back of list
          *     
@@ -359,7 +395,7 @@ public:
             nodeBlock *listSearching = mSvList;
             while (listSearching != nullptr)
             {
-                if (listSearching->mStudent.getName() == nameFind)
+                if (listSearching->mStudent.nameCompare(nameFind))
                 {
                     cout << "Found name: " << nameFind << " -- This below is Information: " << endl;
                     cout << listSearching->mStudent;
@@ -371,6 +407,8 @@ public:
             cout << "Not Found!" << endl;
             listSearching = nullptr;
         } while (0);
+
+        printf("Line: %d - Function: %s( End of function )\n", __LINE__, __FUNCTION__);
     }
 
     /**
@@ -407,7 +445,7 @@ public:
                 runList->mTail = runList->mMiddle;
             }
         }
-        if (runList->mSvList == runList->mTail)
+        if (runList->mSvList->mStudent.getID() == ID_find)
         {
             cout << "Found! This below informations!" << endl;
             cout << runList->mMiddle->mStudent;
@@ -532,9 +570,6 @@ public:
                     if (curr->next == nullptr)
                     {
                         pop_back();
-                        prevNode->next = nullptr;
-                        curr = nullptr;
-                        prevNode = nullptr;
                         return;
                     }
                     else
@@ -543,8 +578,6 @@ public:
                         if (curr->prev == nullptr)
                         {
                             pop_front();
-                            prevNode = nullptr;
-                            curr = nullptr;
                             return;
                         }
                         else
@@ -600,8 +633,9 @@ public:
             // Handling a last elem
             do
             {
-                nodeBlock *saveNode = this->mTail;
+                nodeBlock *saveNode = mTail;
                 mTail = mTail->prev;
+                mTail->next = nullptr;
                 saveNode->next = nullptr;
                 saveNode->prev = nullptr;
                 delete saveNode;
@@ -611,9 +645,10 @@ public:
                 {
                     mSvList = nullptr;
                 }
+                setMiddle();
             } while (0);
         }
-        setMiddle();
+
         printf("Line: %d - Function: %s( Out of Pop_back() )\n", __LINE__, __FUNCTION__);
     }
 
@@ -713,7 +748,22 @@ public:
         }
         cout << endl;
     }
+
+    bool operator==( nullptr_t )
+    {
+        if (mSvList == nullptr)
+            return true;
+        return false;
+    }
+
 };
+
+
+
+
+
+
+
 
 /** 
  * @brief This function do checking special character in input Name
@@ -737,13 +787,13 @@ bool checkName(const string &nameCheck)
     return true;
 }
 
-void exerciseFrom1To3()
+void exerciseFrom1To3(dLinkedList *&inputStudentList)
 {
     printf("\n\nLine: %d - Function: %s( ...............  )\n\n", __LINE__, __FUNCTION__);
     int _idFind;
     int _idRemove;
     string _nameFind;
-    dLinkedList *svList = new dLinkedList;
+    dLinkedList *svList = inputStudentList;
     // make list of student
     Student sv1(23, "Trieu John 1", 23);
     Student sv2(234, "Trieu John 2", 18);
@@ -760,16 +810,20 @@ void exerciseFrom1To3()
     /* Insert Data */
     do
     {
-        svList->push_back(sv1);
-        svList->push_back(sv2);
-        svList->push_back(sv3);
-        svList->push_back(sv4);
-        svList->push_back(sv5);
-        svList->push_back(sv6);
-        svList->push_front(sv7);
-        svList->push_back(sv8);
-        svList->push_front(sv9);
-        svList->push_back(sv10);
+        if (svList->getSvList() == nullptr)
+        {
+            svList->push_back(sv1);
+            svList->push_back(sv2);
+            svList->push_back(sv3);
+            svList->push_back(sv4);
+            svList->push_back(sv5);
+            svList->push_back(sv6);
+            svList->push_front(sv7);
+            svList->push_back(sv8);
+            svList->push_front(sv9);
+            svList->push_back(sv10);
+        }
+        
     } while (0);
 
     // Test case for sorting list with buble sort.
@@ -814,7 +868,8 @@ void exerciseFrom1To3()
     //Test cases for searching name function
     do
     {
-        cout << " ****************Search Student by ID - in normal way***********" << endl;
+        cout << endl;
+        cout << " ****************Search Student by Name - in normal way***********" << endl;
         cout << "_idName -- enter: ", getline(cin, _nameFind);
         while (!checkName(_nameFind))
         {
@@ -830,6 +885,7 @@ void exerciseFrom1To3()
     // Test cases for remove function
     do
     {
+        cout << endl;
         cout << " ****************Remove Student by ID***********" << endl;
         cout << "_idRemove -- enter: ", cin >> _idRemove;
         while (cin.fail())
@@ -853,23 +909,23 @@ void exerciseFrom1To3()
     // Test cases for insert function
     do
     {
-        svList->insert(sv6, 2); // Already Exist
-        svList->insert(sv11,5); // Work Fine!
+        cout << endl;
+        cout << "*****************Inserting Student******************" << endl;
+        Student sv12;
+        int _pos;
+        cout << "Student -- enter: ", cin >> sv12;
+        cout << "Pos -- enter: ", cin >> _pos;
+        svList->insert(sv6, 2);  // Already Exist
+        svList->insert(sv11, 5); // Work Fine!
+        svList->insert(sv12, _pos);
         //svList->insert(sv8, 15); // runtime error -- turn off comment for checking
         cout << "*****************After Inserting******************" << endl;
         svList->print();
     } while (0);
 
-    // Deallocated svList
-    do
-    {
 
-        if (svList)
-        {
-            delete svList;
-            svList = nullptr;
-        }
-    } while (0);
+    // pointer svList points to null
+    svList = nullptr;
 }
 
 void Console()
@@ -897,49 +953,83 @@ void Console()
 int SearchMinNonNeg(std::vector<int> arr)
 {
     int _size = arr.size();
-
-    cout << "Input arr: ";
-    for (int idex = 0; idex < _size; idex++)
-    {
-        cout << arr[idex] << " ";
-    }
-    cout << endl;
-
     bool miss_one = true;
-    // checking 1! - because this is a smallest non negative number
-    for (int idex = 0; idex < _size; idex++)
+
+    // Print input arr
+    do
     {
-        if (arr[idex] == 1)
+        cout << "Input arr: ";
+        for (int idex = 0; idex < _size; idex++)
         {
-            miss_one = false;
-            break;
+            cout << arr[idex] << " ";
         }
-    }
+        cout << endl;
+    } while (0);
+
+    // checking 1! - because this is a smallest non negative number
+    do
+    {
+        for (int idex = 0; idex < _size; idex++)
+        {
+            if (arr[idex] == 1)
+            {
+                miss_one = false;
+                break;
+            }
+        }
+    } while (0);
+
     // if we have no number 1 in array -> return it
     if (miss_one)
         return 1;
 
-    for (int idex = 0; idex < _size; idex++)
+    // Make all of number in array less than 0 and larger msize = 1
+    // non-negative number starts by 1
+    do
     {
-        if (arr[idex] <= 0 || arr[idex] > _size)
+        for (int idex = 0; idex < _size; idex++)
         {
-            arr[idex] = 1;
+            if (arr[idex] <= 0 || arr[idex] > _size)
+            {
+                arr[idex] = 1;
+            }
         }
-    }
+    } while (0);
 
-    for (int idex = 0; idex < _size; idex++)
+    // make boundary for this arr
+    // arr = [1 2 6 4 5] | size = 5
+    // arr = [1 2 1 4 5] | size = 5 (because 6 > max size);
+
+    // arr[(arr[0] - 1) % size] += n ||=> arr[0%5] += n ||=> arr[0] = 6
+    // arr[(arr[1] - 1) % size] += n ||=> arr[1%5] += n ||=> arr[1] = 6
+    //      Note: 1 % 5 <=> 1 / 5 = 0.2 -> 5 * 0 = 0 -> 1 - 0 = 1
+    // arr[(arr[2] - 1) % size] += n ||=> arr[0%5] += n ||=> arr[0] = 12
+    // arr[(arr[3] - 1) % size] += n ||=> arr[3%5] += n ||=> arr[3] = 10
+    // arr[(arr[4] - 1) % size] += n ||=> arr[4%5] += n ||=> arr[4] = 10
+    //
+    // ==> arr= [12 6 1 10 10]
+    do
     {
-        arr[(arr[idex] - 1) % _size] += _size;
-    }
+        for (int idex = 0; idex < _size; idex++)
+        {
+            arr[(arr[idex] - 1) % _size] += _size;
+        }
+    } while (0);
 
     // checking for the first elem < size -> if so return index + 1
-    for (int idex = 0; idex < _size; idex++)
+    // from above we have
+    // ==> arr= [12 6 1 10 10]
+    // ==> arr[2] < n => return index + 1 = 3;
+    do
     {
-        if (arr[idex] <= _size)
+        for (int idex = 0; idex < _size; idex++)
         {
-            return idex + 1;
+            if (arr[idex] <= _size)
+            {
+                return idex + 1;
+            }
         }
-    }
+    } while (0);
 
     // if this array is sorting array and no missing
     // return size + 1
@@ -968,7 +1058,7 @@ void exercise4()
 int main()
 {
     int _choice{};
-
+    dLinkedList* svList = new dLinkedList();
     // Console Program Running
     while (1)
     {
@@ -996,9 +1086,9 @@ int main()
             {
             case 1:
                 system("cls");
-                 exerciseFrom1To3();
+                exerciseFrom1To3(svList);
                 cout << endl
-                    << "Take time for looking your output!" << endl;
+                     << "Take time for looking your output!" << endl;
                 cout << "If you want to return to consol, Type anything to comeback console!" << endl;
                 _getch();
                 break;
@@ -1006,13 +1096,20 @@ int main()
                 system("cls");
                 exercise4();
                 cout << endl
-                    << "Take time for looking your output!" << endl;
+                     << "Take time for looking your output!" << endl;
                 cout << "If you want to return to consol, Type anything to comeback console!" << endl;
                 _getch();
                 break;
             case 0:
                 system("cls");
-                cout << "Bye bye!!!!!!!";
+                
+                if (svList)
+                {
+                    delete svList;
+                    svList = nullptr;
+                }
+
+                cout << "Bye bye!!!!!!!" << endl;
                 return 0;
 
             default:
@@ -1023,8 +1120,8 @@ int main()
                 break;
             }
         } while (0);
-
     }
+
 
     printf("Line: %d - Function: %s( End of Main! )\n", __LINE__, __FUNCTION__);
     return 0;
