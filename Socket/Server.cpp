@@ -12,8 +12,8 @@ using namespace std;
 #define MAX 1024
 enum e_msg_class
 {
-    e_msg_class_request,
-    e_msg_class_response
+    e_msg_class_request, 
+    e_msg_class_response 
 };
 enum e_msg_type
 {
@@ -66,7 +66,7 @@ int main(int argc, char const *argv[])
     int addrlen = sizeof(address);
     char readClientMessage[MAX] = {0};
     const char *Return = "exit";
-    char *sendingToClient = new char[MAX];
+    char *sendingToClient;
 
     if (argc < 2)
     {
@@ -106,24 +106,9 @@ int main(int argc, char const *argv[])
 
     while (1)
     {
-        vector<char *> commandList;
-        // handling receive and send:
         memset(readClientMessage, 0, sizeof(readClientMessage));
         readFromClient = read(client_fd, readClientMessage, 1024);
         printf("Message from Client: %s\n", readClientMessage);
-
-        // char *pch = strtok(readClientMessage, " ");
-        // while (pch != nullptr)
-        // {
-        //     commandList.push_back(pch);
-        //     pch = strtok(nullptr, " ");
-        // }
-
-        // if (commandList.size() == 2)
-        // {
-        //     printf("First: %s\n", commandList[0]);
-        //     printf("Second: %s\n", commandList[1]);
-        // }
 
         if (strncmp(readClientMessage, "exit", 4) == 0)
         {
@@ -135,7 +120,7 @@ int main(int argc, char const *argv[])
         if (strncmp(readClientMessage, "ls", 2) == 0)
         {
             printf("Starting list all files in dir!\n");
-            std::vector<char*> sendToClient;
+            sendingToClient = new char[MAX];
             DIR *direct;
             struct dirent *end;
             if (direct)
@@ -143,30 +128,22 @@ int main(int argc, char const *argv[])
                 direct = opendir(".");
                 while ((end = readdir(direct)) != nullptr)
                 {
-                    printf("Message: %s \n",end->d_name);
-                    sendToClient.push_back(end->d_name);
+                    strcat(sendingToClient, end->d_name);
                     // strcat(fromServertoClient, end->d_name);
-                    // strcat(fromServertoClient, " \n");
+                    strcat(sendingToClient, "\n");
                 }
                 closedir(direct);
             }
-            sendToClient.push_back((char *)"Stop");
-            for (int idex = 0; idex < sendToClient.size(); idex++)
-            {
-                send(client_fd, sendToClient[idex], sizeof(sendToClient[idex]),0);
-            }
+            printf("%s\n", sendingToClient);
+            send(client_fd, sendingToClient, strlen(sendingToClient), 0);
+            continue;
         }
 
-        //sendingToClient = new char[1024];
-        bzero(sendingToClient, sizeof(sendingToClient));
-        sendingToClient = (char *)"Oke! Server is already received!\n";
+        memset(sendingToClient, 0, sizeof(sendingToClient));
+        sendingToClient = (char *)"Server responds\n";
         send(client_fd, sendingToClient, strlen(sendingToClient), 0);
-
-        // delete sendingToClient;
-        // sendingToClient = nullptr;
     }
 
-    printf("Out of Loop! End function!\n");
     close(client_fd);
     close(server_fd);
 

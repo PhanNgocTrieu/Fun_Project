@@ -56,37 +56,44 @@ int main(int argc, char const *argv[])
 
         //Enter string
         printf(">: ");
-        while (((sendingToServer[n++] = getchar()) != '\n'))
-            ;
+        while (((sendingToServer[n++] = getchar()) != '\n'));
+
         send(sock, sendingToServer, strlen(sendingToServer), 0);
 
         readFromServer = new char[MAX];
-        
-        if (strncmp(sendingToServer,"ls",2) == 0)
-        {
-            while (1)
-            {
-                valread = read(sock, readFromServer, MAX);
-                if (strncmp(readFromServer,"Over",4) == 0)
-                {
-                    break;
-                }
-                printf("%s\n", readFromServer);
-            }
-        }
-        // valread = read(sock, readFromServer, MAX);
-        // printf("%s\n", readFromServer);
-
+        valread = read(sock, readFromServer, MAX);
         if (strncmp(readFromServer, "exit", 4) == 0)
         {
             printf("Client exit....\n");
             break;
         }
 
-        delete readFromServer;
-        readFromServer = nullptr;
-        printf("Out of reading!\n");
+        if (strncmp(sendingToServer, "ls", 2) == 0)
+        {
+            char *pch = strtok(readFromServer, "\n");
+            while (pch != nullptr)
+            {
+                printf("%s\n", pch);
+                pch = strtok(nullptr, "\n");
+            }
+            delete pch;
+            pch = nullptr;
+            continue;
+        }
+
+        valread = read(sock, readFromServer, MAX);
+        printf("%s\n", readFromServer);
     }
 
+    if (readFromServer)
+    {
+        delete readFromServer;
+        readFromServer = nullptr;
+    }
+    if (sendingToServer)
+    {
+        delete sendingToServer;
+        sendingToServer = nullptr;
+    }
     return 0;
 }
