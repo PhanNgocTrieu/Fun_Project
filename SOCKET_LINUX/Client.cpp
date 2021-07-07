@@ -15,6 +15,8 @@
 #define PREAMBLE_RM 2000
 #define PREAMBLE_DL 3000
 
+#define BUFSIZE 65536
+
 using namespace std;
 
 enum e_msg_class
@@ -193,12 +195,12 @@ int main(int argc, char *argv[])
     {
         // COMMON MESSAGE
         message_header msg;
-        char msgToServer[100];
+        char msgToServer[1024];
         char *data_to_send;
         FILE *fp;
 
         cout << "\nMessage/Command: ";
-        fgets(msgToServer, 100, stdin);
+        fgets(msgToServer, 1024, stdin);
 
         // **** HANDLING INPUT FROM CONSOLE ****
 
@@ -300,7 +302,8 @@ int main(int argc, char *argv[])
                 printf("\t  Type:           = %d    \n", recmsg.msg_type);
                 printf("\t  timestamps:     = %ld    \n", recmsg.timestamp);
                 printf("\t  Len:            = %d    \n", recmsg.length_of_data);
-                cout << "Message of client: " << msgOfClient << endl << endl;
+                cout << "Message of client: " << msgOfClient << endl
+                     << endl;
 
                 // ****** DEALLOCATED ALL MEMORY WHICH ARE ALLOCATED *****
                 free(recev_data);
@@ -416,44 +419,82 @@ int main(int argc, char *argv[])
 
             if (splitString[0] == "download")
             {
-                // string s = splitString[1];
-                // s += " ";
-                // s += splitString[2];
+                // **** SETIUP DATA WE NEEDS
+                string fileName = splitString[1];
+                string localPath = splitString[2];
 
-                // msg.preamble = 12343;
-                // msg.msg_class = e_msg_class_request;
-                // msg.msg_type = e_msg_type_get;
-                // msg.timestamp = 112324;
-                // msg.length_of_data = s.length();
-                // cout << "s: " << s << " -- len: " << s.length() << endl;
-                // data_to_send = (char *)malloc(sizeof(struct message_header) + msg.length_of_data);
+                // **** DISPLAYING DATA
+                cout << "\n\nFILENAME: " << fileName << endl;
+                cout << "localPath: " << localPath << endl;
 
-                // // setup for sending fileName;
-                // int idex = 0;
-                // memcpy(data_to_send + idex, &msg.preamble, sizeof(msg.preamble));
-                // idex += sizeof(msg.preamble);
-                // memcpy(data_to_send + idex, &msg.msg_class, sizeof(msg.msg_class));
-                // idex += sizeof(msg.msg_class);
-                // memcpy(data_to_send + idex, &msg.msg_type, sizeof(msg.msg_type));
-                // idex += sizeof(msg.msg_type);
-                // memcpy(data_to_send + idex, &msg.timestamp, sizeof(msg.timestamp));
-                // idex += sizeof(msg.timestamp);
-                // memcpy(data_to_send + idex, &msg.length_of_data, sizeof(msg.length_of_data));
-                // memcpy(data_to_send + sizeof(message_header), (char*)splitString[1], msg.length_of_data);
+                // **** SENDING FILENAME TO SERVER
+                msg.preamble = PREAMBLE_DL;
+                msg.msg_class = e_msg_class_request;
+                msg.msg_type = e_msg_type_get;
+                msg.timestamp = 112324;
+                msg.length_of_data = fileName.length();
+                cout << "\n\nfileName: " << fileName << " -- len: " << fileName.length() << endl;
+                data_to_send = (char *)malloc(sizeof(struct message_header) + msg.length_of_data);
 
-                // printf("\nTotal data to send: %ld bytes", sizeof(struct message_header) + msg.length_of_data);
-                // //int sendVal = send(send(sockfd, fileName, sizeof(fileName), 0)
-                // if ( sendVal < 0)
-                // {
-                //     cout << "Error: send failed\n";
-                //     exit(EXIT_FAILURE);
-                // }
-                // else
-                // {
-                //     cout << "Client send " << sendVal << " bytes!\n" << endl;
-                // }
+                // **** SETUP FOR SENDING FILENAME;
+                int idex = 0;
+                memcpy(data_to_send + idex, &msg.preamble, sizeof(msg.preamble));
+                idex += sizeof(msg.preamble);
+                memcpy(data_to_send + idex, &msg.msg_class, sizeof(msg.msg_class));
+                idex += sizeof(msg.msg_class);
+                memcpy(data_to_send + idex, &msg.msg_type, sizeof(msg.msg_type));
+                idex += sizeof(msg.msg_type);
+                memcpy(data_to_send + idex, &msg.timestamp, sizeof(msg.timestamp));
+                idex += sizeof(msg.timestamp);
+                memcpy(data_to_send + idex, &msg.length_of_data, sizeof(msg.length_of_data));
+                memcpy(data_to_send + sizeof(message_header), (char *)fileName.c_str(), msg.length_of_data);
 
-                // DownloadFile(sockfd);
+                printf("\nTotal data to send: %ld bytes", sizeof(struct message_header) + msg.length_of_data);
+
+                // **** SENDING FILENAME TO SERVer
+                int sendVal = send(sockfd, data_to_send, sizeof(struct message_header) + msg.length_of_data, 0);
+                if (sendVal < 0)
+                {
+                    cout << "Error: send failed\n";
+                    exit(EXIT_FAILURE);
+                }
+                else
+                {
+                    cout << "\nClient send " << sendVal << " bytes!\n"
+                         << endl;
+                }
+
+                // **** RECEIVING RESPONSE FROM SERVER
+                int totalRec = 0;
+                char *data_recv = new char[BUFSIZE];
+                memset(data_recv, 0, BUFSIZE);
+                printf("Line: %d \n", __LINE__);
+
+                while (true)
+                {
+                    int rec = recv(sockfd, data_recv, BUFSIZE, 0);
+                    totalRec += rec;
+                    if (rec == 0)
+                    {
+                        break;
+                    }
+                }
+                printf("Line: %d \n", __LINE__);
+                printf("\nClien received total %d bytes\n", totalRec);
+
+                // **** CREATE & SAVE A LOCAL FILE
+                char *localfile = (char *)malloc(1 + strlen(localPath.c_str()) + strlen("local_") + strlen(msgToServer));
+                strcpy(localfile, localPath.c_str());
+                if (localPath[localPath.length() - 1] == '/')
+                {
+                    strcat(localfile, "local_");
+                }
+                strcat(localfile, fileName.c_str());
+
+                printf("\nClient save file to %s\n", localfile);
+                FILE *fp = fopen(localfile, "w");
+                // **** WRITING DATA TO LOCAL FILE
+                fwrite(data_recv, 1, totalRec, fp);
             }
         }
         if (data_to_send)

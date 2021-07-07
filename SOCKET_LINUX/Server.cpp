@@ -118,51 +118,6 @@ string getString(char *const &_String, int size)
     return s;
 }
 
-void downloadFile(int sockfd, message_header msg, char *buff)
-{
-    if (sockfd < 0)
-    {
-        return;
-    }
-
-    while (1)
-    {
-        char *fileName;
-        memcpy(fileName, buff + sizeof(message_header), msg.length_of_data);
-        if (fileName[0] == '.')
-        {
-            break;
-        }
-        FILE *fp = fopen(fileName, "r");
-        fseek(fp, 0, SEEK_END);
-        long FileSize = ftell(fp);
-        char GotFileSize[1024];
-
-        send(sockfd, GotFileSize, 1024, 0);
-        rewind(fp);
-        long SizeCheck = 0;
-        char *mfcc;
-        if (FileSize > 1499)
-        {
-            mfcc = (char *)malloc(1500);
-            while (SizeCheck < FileSize)
-            {
-                int Read = fread(mfcc, 1500, sizeof(char), fp);
-                int Sent = send(sockfd, mfcc, Read, 0);
-                SizeCheck += Sent;
-            }
-        }
-        else
-        {
-            mfcc = (char *)malloc(FileSize + 1);
-            fread(mfcc, FileSize, sizeof(char), fp);
-            send(sockfd, mfcc, FileSize, 0);
-        }
-        fclose(fp);
-        sleep(500);
-        free(mfcc);
-    }
-}
 
 int main(int argc, char const *argv[])
 {
@@ -228,7 +183,6 @@ int main(int argc, char const *argv[])
         char *data_to_send;
         message_header recmsg;
         char *buff = new char[1024];
-        char msgFromClient[100];
         e_msg_type typeOfMessage;
 
         read_Val = read(new_socket, buff, 1024);
@@ -246,6 +200,7 @@ int main(int argc, char const *argv[])
 
         if (typeOfMessage == e_msg_type_ls)
         {
+            char msgFromClient[100];
             // *********** RECEIVING REQUEST FROM CLIENT ************
             int index = 0;
             memcpy(&recmsg.preamble, buff + index, sizeof(recmsg.preamble));
@@ -315,8 +270,11 @@ int main(int argc, char const *argv[])
             data_to_send = nullptr;
         }
 
+
+
         if (typeOfMessage == e_msg_type_rm)
         {
+            char msgFromClient[100];
             // **** RECEIVING FROM CLIENT *****
             int index = 0;
             memcpy(&recmsg.preamble, buff + index, sizeof(recmsg.preamble));
@@ -379,8 +337,13 @@ int main(int argc, char const *argv[])
             data_to_send = nullptr;
         }
 
+
+
+        // **** HANDLING WITH DOWNLOAD FILE
         if (typeOfMessage == e_msg_type_get)
         {
+            char msgFromClient[100];
+            // **** RECEIVING FILENAME FROM CLIENT
             int index = 0;
             memcpy(&recmsg.preamble, buff + index, sizeof(recmsg.preamble));
             index += sizeof(recmsg.preamble);
@@ -392,13 +355,69 @@ int main(int argc, char const *argv[])
             index += sizeof(recmsg.timestamp);
             memcpy(&recmsg.length_of_data, buff + index, sizeof(recmsg.length_of_data));
             memcpy(&msgFromClient, buff + sizeof(struct message_header), recmsg.length_of_data);
-            msgFromClient[recmsg.length_of_data + 1] = '\n';
 
             string stringMessage = getString(msgFromClient, recmsg.length_of_data);
-            downloadFile(new_socket, recmsg, buff);
+
+            char *filePath = (char *)malloc(recmsg.length_of_data);
+            strcpy(filePath, msgFromClient);
+            printf("\nFilepath       = %s", filePath);
+
+            FILE *fp = fopen(filePath, "r");
+            if (fp)
+            {
+                printf("\nTest OK\n");
+            }
+            else
+            {
+                printf("\nTest NG\n");
+            }
+
+            if (fp != nullptr)
+            {
+                printf("\nFile exists\n");
+
+                // **** SET POINT TO THE LAST
+                fseek(fp, 0, SEEK_END);
+
+                // **** TAKE SIZE OF FILE
+                long fileSize = ftell(fp);
+
+                printf("\nFilesize          = %ld bytes", fileSize);
+
+                // **** RESET POINTER TO THE FRONT OF FILE
+                fseek(fp, 0, SEEK_SET);
+
+                long totalSend = 0;
+                char *pBuff = (char *)malloc(fileSize);
+
+                // **** READ BYTE BY BYTE FROM FILE
+                int Read = fread(pBuff, 1, fileSize, fp);
+                printf("\nCopy %d bytes to buffer\n", Read);
+
+                totalSend = send(new_socket, pBuff, fileSize, 0);
+                
+                printf("\nServer send total %ld bytes\n", totalSend);
+                fclose(fp);
+
+
+                //**** DEALLOCATED ****
+                free(pBuff);
+                pBuff = nullptr;
+            }
+            else
+            {
+                printf("\nFile does not exit!");
+                const char *receive = "File does not exist!";
+                send(new_socket, receive, strlen(receive), 0);
+            }
+
+            // **** DEALLOCATED
+            free(filePath);
+            filePath = nullptr;
         }
 
-        
+        free(buff);
+        buff = nullptr;
 
     }
 
@@ -407,3 +426,5 @@ int main(int argc, char const *argv[])
 
     return 0;
 }
+
+
