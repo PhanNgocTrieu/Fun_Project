@@ -11,6 +11,13 @@
 #include <filesystem>
 #include <vector>
 #include <iostream>
+#include <chrono>
+#include <ctime>
+
+using std::chrono::duration_cast;
+using std::chrono::milliseconds;
+using std::chrono::seconds;
+using std::chrono::system_clock;
 
 #define PREAMBLE_LS 1000
 #define PREAMBLE_RM 2000
@@ -18,8 +25,13 @@
 
 using namespace std;
 
-string readFiles(const string &dirPath)
+string readFiles(string dirPath)
 {
+    if (dirPath[dirPath.length() - 1] != '/')
+    {
+        char c = '/';
+        dirPath.push_back(c);
+    }
     string res = "";
     DIR *dir;
     struct dirent *ent;
@@ -108,6 +120,27 @@ struct message_header
     int length_of_data;
 };
 
+struct message_ls
+{
+    struct message_header header;
+    // Data
+    std::string fileList;
+};
+
+struct message_rm
+{
+    struct message_header header;
+    // Data
+    std::string announce;
+};
+
+struct message_get
+{
+    struct message_header header;
+    // Data
+    std::string fileName;
+};
+
 string getString(char *const &_String, int size)
 {
     string s = "";
@@ -118,10 +151,9 @@ string getString(char *const &_String, int size)
     return s;
 }
 
-
 int main(int argc, char const *argv[])
 {
-
+    auto millisec_since_epoch = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
     int server_fd, new_socket, read_Val;
     struct sockaddr_in address; // address for connecting
     int opt = 1;
@@ -178,11 +210,12 @@ int main(int argc, char const *argv[])
 
     while (1)
     {
-        printf("\n\nServer is listening....");
+        printf("\n\nServer is listening....\n");
 
         char *data_to_send;
-        message_header recmsg;
-        char *buff = new char[1024];
+        int size_of_header_not_padding = sizeof(message_header::preamble) + sizeof(message_header::msg_class) +
+                                         sizeof(message_header::msg_type) + sizeof(message_header::timestamp) + sizeof(message_header::length_of_data);
+        char *buff = (char *)malloc(1024);
         e_msg_type typeOfMessage;
 
         read_Val = read(new_socket, buff, 1024);
@@ -196,65 +229,68 @@ int main(int argc, char const *argv[])
             printf("\nServer read %d bytes\n", read_Val);
         }
 
-        memcpy(&typeOfMessage, buff + sizeof(recmsg.preamble) + sizeof(recmsg.msg_class), sizeof(recmsg.msg_type));
+        memcpy(&typeOfMessage, buff + sizeof(message_header::preamble) + sizeof(message_header::msg_class), sizeof(message_header::msg_type));
+        cout << "\nTYPE OF MESSAGE: " << typeOfMessage << endl;
 
         if (typeOfMessage == e_msg_type_ls)
         {
+            message_ls recmsg;
             char msgFromClient[100];
             // *********** RECEIVING REQUEST FROM CLIENT ************
             int index = 0;
-            memcpy(&recmsg.preamble, buff + index, sizeof(recmsg.preamble));
-            index += sizeof(recmsg.preamble);
-            memcpy(&recmsg.msg_class, buff + index, sizeof(recmsg.msg_class));
-            index += sizeof(recmsg.msg_class);
-            memcpy(&recmsg.msg_type, buff + index, sizeof(recmsg.msg_type));
-            index += sizeof(recmsg.msg_type); // xem phan address
-            memcpy(&recmsg.timestamp, buff + index, sizeof(recmsg.timestamp));
-            index += sizeof(recmsg.timestamp);
-            memcpy(&recmsg.length_of_data, buff + index, sizeof(recmsg.length_of_data));
-            memcpy(&msgFromClient, buff + sizeof(struct message_header), recmsg.length_of_data);
-            // msgFromClient[recmsg.length_of_data + 1] = '\n';
+            memcpy(&recmsg.header.preamble, buff + index, sizeof(recmsg.header.preamble));
+            index += sizeof(recmsg.header.preamble);
+            memcpy(&recmsg.header.msg_class, buff + index, sizeof(recmsg.header.msg_class));
+            index += sizeof(recmsg.header.msg_class);
+            memcpy(&recmsg.header.msg_type, buff + index, sizeof(recmsg.header.msg_type));
+            index += sizeof(recmsg.header.msg_type); // xem phan address
+            memcpy(&recmsg.header.timestamp, buff + index, sizeof(recmsg.header.timestamp));
+            index += sizeof(recmsg.header.timestamp);
+            memcpy(&recmsg.header.length_of_data, buff + index, sizeof(recmsg.header.length_of_data));
+            index += sizeof(recmsg.header.length_of_data);
+            memcpy(&msgFromClient, buff + index, recmsg.header.length_of_data);
+            recmsg.fileList = getString(msgFromClient, recmsg.header.length_of_data);
 
             // **** CONVERT TO STRING ****
-            string stringMessage = getString(msgFromClient, recmsg.length_of_data);
+            string listString = getString(msgFromClient, recmsg.header.length_of_data);
 
-            // **** CHECKING DATA FROM CLIENT
-            cout << "\tCommand: " << stringMessage << endl;
-            cout << "\tlen of path: " << stringMessage.length() << endl;
-            // cout << "\tMessage: " << filePath << endl;
 
             // ************* SENDING RESPONSE MESSAGE TO CLIENT *********
-            message_header msgForClient;
+            message_ls msgForClient;
 
             // **** HANDLING WITH LISTING ALL OF FILES ****
-            string filePath = readFiles(stringMessage);
+            std::string fileList = readFiles(recmsg.fileList);
 
             // **** SETUP MEMORY FOR SENDING ****
-            msgForClient.preamble = PREAMBLE_LS;
-            msgForClient.msg_class = e_msg_class_response;
-            msgForClient.msg_type = e_msg_type_ls;
-            msgForClient.timestamp = 1231212;
-            msgForClient.length_of_data = filePath.length();
+            msgForClient.header.preamble = PREAMBLE_LS;
+            msgForClient.header.msg_class = e_msg_class_response;
+            msgForClient.header.msg_type = e_msg_type_ls;
+            msgForClient.header.timestamp = millisec_since_epoch;
+            msgForClient.header.length_of_data = fileList.length();
+            msgForClient.fileList = fileList;
 
-            // **** CHECKING MESSAGE BEFORE SENDING
-            cout << "Files: " << filePath;
 
             // **** SETUP MEMORY SPACE FOR SENDING ****
-            data_to_send = (char *)malloc(sizeof(message_header) + msgForClient.length_of_data);
+
+            data_to_send = (char *)malloc(size_of_header_not_padding + msgForClient.header.length_of_data);
             int idex = 0;
-            memcpy(data_to_send + idex, &msgForClient.preamble, sizeof(msgForClient.preamble));
-            idex += sizeof(msgForClient.preamble);
-            memcpy(data_to_send + idex, &msgForClient.msg_class, sizeof(msgForClient.msg_class));
-            idex += sizeof(msgForClient.msg_class);
-            memcpy(data_to_send + idex, &msgForClient.msg_type, sizeof(msgForClient.msg_type));
-            idex += sizeof(msgForClient.msg_type);
-            memcpy(data_to_send + idex, &msgForClient.timestamp, sizeof(msgForClient.timestamp));
-            idex += sizeof(msgForClient.timestamp);
-            memcpy(data_to_send + idex, &msgForClient.length_of_data, sizeof(msgForClient.length_of_data));
-            memcpy(data_to_send + sizeof(message_header), (char *)filePath.c_str(), msgForClient.length_of_data);
+            memcpy(data_to_send + idex, &msgForClient.header.preamble, sizeof(msgForClient.header.preamble));
+            idex += sizeof(msgForClient.header.preamble);
+            memcpy(data_to_send + idex, &msgForClient.header.msg_class, sizeof(msgForClient.header.msg_class));
+            idex += sizeof(msgForClient.header.msg_class);
+            memcpy(data_to_send + idex, &msgForClient.header.msg_type, sizeof(msgForClient.header.msg_type));
+            idex += sizeof(msgForClient.header.msg_type);
+            memcpy(data_to_send + idex, &msgForClient.header.timestamp, sizeof(msgForClient.header.timestamp));
+            idex += sizeof(msgForClient.header.timestamp);
+            memcpy(data_to_send + idex, &msgForClient.header.length_of_data, sizeof(msgForClient.header.length_of_data));
+            idex += sizeof(msgForClient.header.length_of_data);
+            memcpy(data_to_send + idex, (char *)msgForClient.fileList.c_str(), msgForClient.header.length_of_data);
+
+            // ****** ALL OF BYTES THAT WE HAVE TO SEND ****
+            printf("\nTotal data to send: %d bytes", size_of_header_not_padding + msgForClient.header.length_of_data);
 
             // **** SENDING RESPOSE MESSAGE ****
-            int statusSend = send(new_socket, data_to_send, sizeof(message_header) + msgForClient.length_of_data, 0);
+            int statusSend = send(new_socket, data_to_send, size_of_header_not_padding + msgForClient.header.length_of_data, 0);
             if (statusSend < 0)
             {
                 perror("Error: Sending failed");
@@ -271,57 +307,69 @@ int main(int argc, char const *argv[])
         }
 
 
-
+        // **** Handling with rm type
         if (typeOfMessage == e_msg_type_rm)
         {
-            char msgFromClient[100];
-            // **** RECEIVING FROM CLIENT *****
+            message_rm recmsg;
+            char msgFromClient[1024];
+            // *********** RECEIVING REQUEST FROM CLIENT ************
             int index = 0;
-            memcpy(&recmsg.preamble, buff + index, sizeof(recmsg.preamble));
-            index += sizeof(recmsg.preamble);
-            memcpy(&recmsg.msg_class, buff + index, sizeof(recmsg.msg_class));
-            index += sizeof(recmsg.msg_class);
-            memcpy(&recmsg.msg_type, buff + index, sizeof(recmsg.msg_type));
-            index += sizeof(recmsg.msg_type); // xem phan address
-            memcpy(&recmsg.timestamp, buff + index, sizeof(recmsg.timestamp));
-            index += sizeof(recmsg.timestamp);
-            memcpy(&recmsg.length_of_data, buff + index, sizeof(recmsg.length_of_data));
-            memcpy(&msgFromClient, buff + sizeof(struct message_header), recmsg.length_of_data);
+            memcpy(&recmsg.header.preamble, buff + index, sizeof(recmsg.header.preamble));
+            index += sizeof(recmsg.header.preamble);
+            memcpy(&recmsg.header.msg_class, buff + index, sizeof(recmsg.header.msg_class));
+            index += sizeof(recmsg.header.msg_class);
+            memcpy(&recmsg.header.msg_type, buff + index, sizeof(recmsg.header.msg_type));
+            index += sizeof(recmsg.header.msg_type); // xem phan address
+            memcpy(&recmsg.header.timestamp, buff + index, sizeof(recmsg.header.timestamp));
+            index += sizeof(recmsg.header.timestamp);
+            memcpy(&recmsg.header.length_of_data, buff + index, sizeof(recmsg.header.length_of_data));
+            index += sizeof(recmsg.header.length_of_data);
+            memcpy(&msgFromClient, buff + index, recmsg.header.length_of_data);
+            recmsg.announce = getString(msgFromClient, recmsg.header.length_of_data);
 
-            // **** CONVERT TO STRING  ****
-            string stringMessage = getString(msgFromClient, recmsg.length_of_data);
+
+            // **** CONVERT TO STRING ****
+            string filePath = getString(msgFromClient, recmsg.header.length_of_data);
 
             // **** HANDLING REMOVING FILE ****
-            string message = removeDirOrFile(stringMessage);
+            string message = removeDirOrFile(filePath);
 
             // **** CHECKING MESSAGE BEFORE SENDING ****
-            cout << "\nIs it successful? -- " << message << endl
+            cout << "\nIs it successful? --> " << message << endl
                  << endl;
 
             // **** FULLFILLING DATA TO HEADER
-            message_header sendmsg;
-            sendmsg.preamble = PREAMBLE_RM;
-            sendmsg.msg_class = e_msg_class_response;
-            sendmsg.msg_type = e_msg_type_rm;
-            sendmsg.timestamp = 1231212;
-            sendmsg.length_of_data = message.length();
+            message_rm sendmsg;
+            sendmsg.header.preamble = PREAMBLE_RM;
+            sendmsg.header.msg_class = e_msg_class_response;
+            sendmsg.header.msg_type = e_msg_type_rm;
+            sendmsg.header.timestamp = millisec_since_epoch;
+            sendmsg.header.length_of_data = message.length();
+            sendmsg.announce = message;
+
 
             // **** SETUP MEMORY FOR SENDING ****
-            data_to_send = (char *)malloc(sizeof(message_header) + sendmsg.length_of_data);
-            index = 0;
-            memcpy(data_to_send + index, &sendmsg.preamble, sizeof(sendmsg.preamble));
-            index += sizeof(sendmsg.preamble);
-            memcpy(data_to_send + index, &sendmsg.msg_class, sizeof(sendmsg.msg_class));
-            index += sizeof(sendmsg.msg_class);
-            memcpy(data_to_send + index, &sendmsg.msg_type, sizeof(sendmsg.msg_type));
-            index += sizeof(sendmsg.msg_type);
-            memcpy(data_to_send + index, &sendmsg.timestamp, sizeof(sendmsg.timestamp));
-            index += sizeof(sendmsg.timestamp);
-            memcpy(data_to_send + index, &sendmsg.length_of_data, sizeof(sendmsg.length_of_data));
-            memcpy(data_to_send + sizeof(message_header), (char *)message.c_str(), sendmsg.length_of_data);
+            data_to_send = (char *)malloc(size_of_header_not_padding + sendmsg.header.length_of_data);
+            int idex = 0;
+            memcpy(data_to_send + idex, &sendmsg.header.preamble, sizeof(sendmsg.header.preamble));
+            idex += sizeof(sendmsg.header.preamble);
+            memcpy(data_to_send + idex, &sendmsg.header.msg_class, sizeof(sendmsg.header.msg_class));
+            idex += sizeof(sendmsg.header.msg_class);
+            memcpy(data_to_send + idex, &sendmsg.header.msg_type, sizeof(sendmsg.header.msg_type));
+            idex += sizeof(sendmsg.header.msg_type);
+            memcpy(data_to_send + idex, &sendmsg.header.timestamp, sizeof(sendmsg.header.timestamp));
+            idex += sizeof(sendmsg.header.timestamp);
+            memcpy(data_to_send + idex, &sendmsg.header.length_of_data, sizeof(sendmsg.header.length_of_data));
+            idex += sizeof(sendmsg.header.length_of_data);
+            memcpy(data_to_send + idex, (char *)sendmsg.announce.c_str(), sendmsg.header.length_of_data);
 
-            // **** SENDING RESPONSE TO CLIENT ****
-            int statusSend = send(new_socket, data_to_send, sizeof(message_header) + sendmsg.length_of_data, 0);
+
+
+            // ****** ALL OF BYTES THAT WE HAVE TO SEND ****
+            printf("\nTotal data to send: %d bytes", size_of_header_not_padding + sendmsg.header.length_of_data);
+
+            // **** SENDING RESPOSE MESSAGE ****
+            int statusSend = send(new_socket, data_to_send, size_of_header_not_padding + sendmsg.header.length_of_data, 0);
             if (statusSend < 0)
             {
                 perror("Error: Sending failed");
@@ -332,77 +380,54 @@ int main(int argc, char const *argv[])
                 printf("\nClient send %d bytes\n", statusSend);
             }
 
-            // **** DEALLOCATED MEMORY WE ALLOCATED
+            // **** DEALLOCATED MEMORY THAT WAS ALLOCATED ****
             free(data_to_send);
             data_to_send = nullptr;
         }
 
-
-
-        // **** HANDLING WITH DOWNLOAD FILE
+        // // **** HANDLING WITH DOWNLOAD FILE
         if (typeOfMessage == e_msg_type_get)
         {
+            message_get recmsg;
             char msgFromClient[100];
             // **** RECEIVING FILENAME FROM CLIENT
             int index = 0;
-            memcpy(&recmsg.preamble, buff + index, sizeof(recmsg.preamble));
-            index += sizeof(recmsg.preamble);
-            memcpy(&recmsg.msg_class, buff + index, sizeof(recmsg.msg_class));
-            index += sizeof(recmsg.msg_class);
-            memcpy(&recmsg.msg_type, buff + index, sizeof(recmsg.msg_type));
-            index += sizeof(recmsg.msg_type); // xem phan address
-            memcpy(&recmsg.timestamp, buff + index, sizeof(recmsg.timestamp));
-            index += sizeof(recmsg.timestamp);
-            memcpy(&recmsg.length_of_data, buff + index, sizeof(recmsg.length_of_data));
-            memcpy(&msgFromClient, buff + sizeof(struct message_header), recmsg.length_of_data);
+            memcpy(&recmsg.header.preamble, buff + index, sizeof(recmsg.header.preamble));
+            index += sizeof(recmsg.header.preamble);
+            memcpy(&recmsg.header.msg_class, buff + index, sizeof(recmsg.header.msg_class));
+            index += sizeof(recmsg.header.msg_class);
+            memcpy(&recmsg.header.msg_type, buff + index, sizeof(recmsg.header.msg_type));
+            index += sizeof(recmsg.header.msg_type); // xem phan address
+            memcpy(&recmsg.header.timestamp, buff + index, sizeof(recmsg.header.timestamp));
+            index += sizeof(recmsg.header.timestamp);
+            memcpy(&recmsg.header.length_of_data, buff + index, sizeof(recmsg.header.length_of_data));
+            index += sizeof(recmsg.header.length_of_data);
+            memcpy(&msgFromClient, buff + index, recmsg.header.length_of_data);
+            recmsg.fileName = getString(msgFromClient, recmsg.header.length_of_data);
 
-            string stringMessage = getString(msgFromClient, recmsg.length_of_data);
+            // ****** SENDING RESPONSE TO CLIENT *****
+            char *filepath = (char *)malloc(recmsg.header.length_of_data);
+            strcpy(filepath, msgFromClient);
 
-            char *filePath = (char *)malloc(recmsg.length_of_data);
-            strcpy(filePath, msgFromClient);
-            printf("\nFilepath       = %s", filePath);
+            printf("\nFilepath       = %s", filepath);
 
-            FILE *fp = fopen(filePath, "r");
-            if (fp)
+            FILE *fp = fopen(filepath, "r");
+            if (fp != NULL)
             {
-                printf("\nTest OK\n");
-            }
-            else
-            {
-                printf("\nTest NG\n");
-            }
-
-            if (fp != nullptr)
-            {
-                printf("\nFile exists\n");
-
-                // **** SET POINT TO THE LAST
+                printf("\nFile exits");
                 fseek(fp, 0, SEEK_END);
-
-                // **** TAKE SIZE OF FILE
                 long fileSize = ftell(fp);
-
                 printf("\nFilesize          = %ld bytes", fileSize);
-
-                // **** RESET POINTER TO THE FRONT OF FILE
-                fseek(fp, 0, SEEK_SET);
-
+                fseek(fp, 0, SEEK_SET); // reset the pointer t	o the start of the file
                 long totalSend = 0;
-                char *pBuff = (char *)malloc(fileSize);
-
-                // **** READ BYTE BY BYTE FROM FILE
-                int Read = fread(pBuff, 1, fileSize, fp);
+                char *pBuf = (char *)malloc(fileSize);
+                int Read = fread(pBuf, 1, fileSize, fp);
                 printf("\nCopy %d bytes to buffer\n", Read);
+                totalSend = send(new_socket, pBuf, fileSize, 0);
 
-                totalSend = send(new_socket, pBuff, fileSize, 0);
-                
                 printf("\nServer send total %ld bytes\n", totalSend);
+                fflush(fp);
                 fclose(fp);
-
-
-                //**** DEALLOCATED ****
-                free(pBuff);
-                pBuff = nullptr;
             }
             else
             {
@@ -410,15 +435,9 @@ int main(int argc, char const *argv[])
                 const char *receive = "File does not exist!";
                 send(new_socket, receive, strlen(receive), 0);
             }
-
-            // **** DEALLOCATED
-            free(filePath);
-            filePath = nullptr;
         }
-
         free(buff);
         buff = nullptr;
-
     }
 
     close(new_socket);
@@ -426,5 +445,3 @@ int main(int argc, char const *argv[])
 
     return 0;
 }
-
-

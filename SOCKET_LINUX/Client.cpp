@@ -10,6 +10,13 @@
 #include <arpa/inet.h>
 #include <vector>
 #include <iostream>
+#include <chrono>
+#include <ctime>
+
+using std::chrono::duration_cast;
+using std::chrono::milliseconds;
+using std::chrono::seconds;
+using std::chrono::system_clock;
 
 #define PREAMBLE_LS 1000
 #define PREAMBLE_RM 2000
@@ -39,6 +46,28 @@ struct message_header
     int length_of_data;
 };
 
+struct message_ls
+{
+    struct message_header header;
+    // Data
+    string file_path;
+};
+
+struct message_rm
+{
+    struct message_header header;
+    // Data
+    string file_path;
+};
+
+struct message_get
+{
+    struct message_header header;
+    // Data
+    string file_path;
+    string local_path;
+};
+
 vector<string> split(char *_string)
 {
     vector<string> res;
@@ -66,86 +95,6 @@ vector<string> split(char *_string)
 
     return res;
 }
-// void check()
-// {
-//     printf("\nSize of header          = %ld bytes", sizeof(struct message_header));
-//     printf("\nSize of preamble        = %ld", sizeof(msg.preamble));
-//     printf("\nSize of msg_class       = %ld", sizeof(msg.msg_class));
-//     printf("\nSize of msg_type        = %ld", sizeof(msg.msg_type));
-//     printf("\nSize of timestamp       = %ld", sizeof(msg.timestamp));
-//     printf("\nSize of length_of_data  = %ld", sizeof(msg.length_of_data));
-
-//     printf("\n\nValue of preamble       	= %d", msg.preamble);
-//     printf("\nValue of msg_class        = %d", msg.msg_class);
-//     printf("\nValue of msg_type         = %d", msg.msg_type);
-//     printf("\nValue of timestamp        = %ld", msg.timestamp);
-//     printf("\nValue of length_of_data   = %d", msg.length_of_data);
-
-//     printf("\n\nAddress of preamble      	= %p", &msg.preamble);
-//     printf("\nAddress of msg_class       = %p", &msg.msg_class);
-//     printf("\nAddress of msg_type        = %p", &msg.msg_type);
-//     printf("\nAddress of timestamp       = %p", &msg.timestamp);
-//     printf("\nAddress of length_of_data  = %p", &msg.length_of_data);
-// }
-
-void DownloadFile(int sockfd)
-{
-
-    char *fileName;
-
-    char *localPath;
-
-    if (sockfd < 0)
-    {
-        return;
-    }
-    while (1)
-    {
-        if (fileName[0] == '.')
-        {
-            send(sockfd, fileName, sizeof(fileName), 0);
-            break;
-        }
-        if (localPath[0] == '.')
-        {
-            send(sockfd, localPath, sizeof(localPath), 0);
-            break;
-        }
-        char GotFileSize[1024];
-        recv(sockfd, GotFileSize, 1024, 0);
-
-        // taking size of File in integer
-        long FileSize = atoi(GotFileSize);
-        long SizeCheck = 0;
-
-        // open local file that we will store;
-        FILE *fp = fopen(localPath, "w");
-        char *mfcc;
-        if (FileSize > 1499)
-        {
-            // maximun is 1500 bytes
-            mfcc = (char *)malloc(1500);
-            while (SizeCheck < FileSize)
-            {
-                int Received = recv(sockfd, mfcc, 1500, 0);
-                SizeCheck += Received;
-                fwrite(mfcc, 1, Received, fp);
-                fflush(fp);
-                printf("Filesize: %ld\nSizecheck: %ld\nReceived: %d\n\n", FileSize, SizeCheck, Received);
-            }
-        }
-        else
-        {
-            mfcc = (char *)malloc(FileSize + 1);
-            int Received = recv(sockfd, mfcc, FileSize, 0);
-            fwrite(mfcc, 1, Received, fp);
-            fflush(fp);
-        }
-        fclose(fp);
-        sleep(500);
-        free(mfcc);
-    }
-}
 
 string getString(char *const &_String, int size)
 {
@@ -159,6 +108,9 @@ string getString(char *const &_String, int size)
 
 int main(int argc, char *argv[])
 {
+    // TIME IN MILLISECOND
+    auto millisec_since_epoch = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+
     // **** SETUP VARIABLES FOR CLIENT SIDE
     int sockfd, portno, readVal;
     int portNum;
@@ -194,10 +146,11 @@ int main(int argc, char *argv[])
     while (1)
     {
         // COMMON MESSAGE
-        message_header msg;
+
+        int size_of_header_not_padding = (sizeof(message_header::preamble) + sizeof(message_header::msg_class) + sizeof(message_header::msg_type) + sizeof(message_header::timestamp) + sizeof(message_header::length_of_data));
+
         char msgToServer[1024];
-        char *data_to_send;
-        FILE *fp;
+        char *data_to_send = nullptr;
 
         cout << "\nMessage/Command: ";
         fgets(msgToServer, 1024, stdin);
@@ -214,41 +167,37 @@ int main(int argc, char *argv[])
                 // ****** CHECKING FOR FILEPATH THAT WE WANT TO LIST *******
                 // * If we enter: ls  => list of files at the same directory
                 // * otherwise: ls <path> => List of files at <path>-required director
-
+                message_ls msg;
                 string filePath;
-                filePath = splitString.size() == 1 ? "./" : splitString[1];
 
                 // ***** SETUP FOR HEADER *****
-                msg.preamble = PREAMBLE_LS;
-                msg.length_of_data = e_msg_class_request;
-                msg.msg_type = e_msg_type_ls;
-                msg.timestamp = 123456789;
-                msg.length_of_data = filePath.length();
-
-                // ***** CHECKING FOR WHAT WE ALREADY ENTER *****
-                cout << "Message to send:\n";
-                cout << "\tMessage: " << filePath << endl;
-                cout << "\tLen: " << filePath.length() << endl;
+                msg.file_path = splitString.size() == 1 ? "./" : splitString[1];
+                msg.header.preamble = PREAMBLE_LS;
+                msg.header.msg_class = e_msg_class_request;
+                msg.header.msg_type = e_msg_type_ls;
+                msg.header.timestamp = millisec_since_epoch;
+                msg.header.length_of_data = msg.file_path.length();
 
                 // ***** SET-UP MEMORY FOR SENDING ******
-                data_to_send = (char *)malloc(sizeof(struct message_header) + msg.length_of_data);
+                data_to_send = (char *)malloc(size_of_header_not_padding + msg.header.length_of_data);
                 int idex = 0;
-                memcpy(data_to_send + idex, &msg.preamble, sizeof(msg.preamble));
-                idex += sizeof(msg.preamble);
-                memcpy(data_to_send + idex, &msg.msg_class, sizeof(msg.msg_class));
-                idex += sizeof(msg.msg_class);
-                memcpy(data_to_send + idex, &msg.msg_type, sizeof(msg.msg_type));
-                idex += sizeof(msg.msg_type);
-                memcpy(data_to_send + idex, &msg.timestamp, sizeof(msg.timestamp));
-                idex += sizeof(msg.timestamp);
-                memcpy(data_to_send + idex, &msg.length_of_data, sizeof(msg.length_of_data));
-                memcpy(data_to_send + sizeof(struct message_header), (char *)filePath.c_str(), msg.length_of_data);
+                memcpy(data_to_send + idex, &msg.header.preamble, sizeof(msg.header.preamble));
+                idex += sizeof(msg.header.preamble);
+                memcpy(data_to_send + idex, &msg.header.msg_class, sizeof(msg.header.msg_class));
+                idex += sizeof(msg.header.msg_class);
+                memcpy(data_to_send + idex, &msg.header.msg_type, sizeof(msg.header.msg_type));
+                idex += sizeof(msg.header.msg_type);
+                memcpy(data_to_send + idex, &msg.header.timestamp, sizeof(msg.header.timestamp));
+                idex += sizeof(msg.header.timestamp);
+                memcpy(data_to_send + idex, &msg.header.length_of_data, sizeof(msg.header.length_of_data));
+                idex += sizeof(msg.header.length_of_data);
+                memcpy(data_to_send + idex, (const char *)msg.file_path.c_str(), msg.header.length_of_data);
 
                 // ****** ALL OF BYTES THAT WE HAVE TO SEND ****
-                printf("\nTotal data to send: %ld bytes", sizeof(struct message_header) + msg.length_of_data);
+                printf("\nTotal data to send: %d bytes", size_of_header_not_padding + msg.header.length_of_data);
 
                 // ***** SENDING DATA TO SERVER *****
-                int statusSend = send(sockfd, data_to_send, sizeof(struct message_header) + msg.length_of_data, 0);
+                int statusSend = send(sockfd, data_to_send, size_of_header_not_padding + msg.header.length_of_data, 0);
                 if (statusSend < 0)
                 {
                     perror("Error: Sending failed");
@@ -263,9 +212,9 @@ int main(int argc, char *argv[])
                 // ************ RECEIVING RESPONSE FROM SERVER **************
 
                 // **** SET-UP VARIABLES *****
-                message_header recmsg;
+                message_ls recmsg;
                 char *recev_data = (char *)malloc(1024);
-                char messgFromServer[1024];
+                // char messgFromServer[1024];
 
                 // **** READING RESPONSE FROM SERVER
                 readVal = recv(sockfd, recev_data, 1024, 0);
@@ -281,28 +230,20 @@ int main(int argc, char *argv[])
 
                 // **** FULFILL MEMORY SPACES
                 int index = 0;
-                memcpy(&recmsg.preamble, recev_data + index, sizeof(recmsg.preamble));
-                index += sizeof(recmsg.preamble);
-                memcpy(&recmsg.msg_class, recev_data + index, sizeof(recmsg.msg_class));
-                index += sizeof(recmsg.msg_class);
-                memcpy(&recmsg.msg_type, recev_data + index, sizeof(recmsg.msg_type));
-                index += sizeof(recmsg.msg_type);
-                memcpy(&recmsg.timestamp, recev_data + index, sizeof(recmsg.timestamp));
-                index += sizeof(recmsg.timestamp);
-                memcpy(&recmsg.length_of_data, recev_data + index, sizeof(recmsg.length_of_data));
-                memcpy(messgFromServer, recev_data + sizeof(message_header), recmsg.length_of_data);
+                memcpy(&recmsg.header.preamble, recev_data + index, sizeof(recmsg.header.preamble));
+                index += sizeof(recmsg.header.preamble);
+                memcpy(&recmsg.header.msg_class, recev_data + index, sizeof(recmsg.header.msg_class));
+                index += sizeof(recmsg.header.msg_class);
+                memcpy(&recmsg.header.msg_type, recev_data + index, sizeof(recmsg.header.msg_type));
+                index += sizeof(recmsg.header.msg_type);
+                memcpy(&recmsg.header.timestamp, recev_data + index, sizeof(recmsg.header.timestamp));
+                index += sizeof(recmsg.header.timestamp);
+                memcpy(&recmsg.header.length_of_data, recev_data + index, sizeof(recmsg.header.length_of_data));
+                index += sizeof(recmsg.header.length_of_data);
+                memcpy(msgToServer, recev_data + index, recmsg.header.length_of_data);
+                recmsg.file_path = getString(msgToServer, recmsg.header.length_of_data);
 
-                // **** CONVERT MESSAGE TO STRING
-                string msgOfClient = getString(messgFromServer, recmsg.length_of_data);
-
-                // **** DISPLAY DATA THAT WE RECEIVED
-                printf("Message from Server:\n");
-                printf("\t  Preamble:       = %d    \n", recmsg.preamble);
-                printf("\t  Class:          = %d    \n", recmsg.msg_class);
-                printf("\t  Type:           = %d    \n", recmsg.msg_type);
-                printf("\t  timestamps:     = %ld    \n", recmsg.timestamp);
-                printf("\t  Len:            = %d    \n", recmsg.length_of_data);
-                cout << "Message of client: " << msgOfClient << endl
+                cout << "Message of client: " << recmsg.file_path << endl
                      << endl;
 
                 // ****** DEALLOCATED ALL MEMORY WHICH ARE ALLOCATED *****
@@ -316,47 +257,46 @@ int main(int argc, char *argv[])
             if (splitString[0] == "rm")
             {
                 // ********* SENDING DATA TO SERVER *******
-
+                message_rm msg;
                 // **** CHECK PATH FOR REMOVING ****
                 if (splitString.size() == 1)
                 {
-                    //break;
+                    break;
                 }
-
+                else
+                {
+                }
                 // **** get path value ****
                 string filePath = splitString[1];
 
                 // **** SETUP FOR HEADER ****
-                msg.preamble = PREAMBLE_RM;
-                msg.msg_class = e_msg_class_request;
-                msg.msg_type = e_msg_type_rm;
-                msg.timestamp = 123456789;
-                msg.length_of_data = filePath.length();
-
-                // **** DISPLAY DATA FOR CHECKING ****
-                cout << "Message to send:\n";
-                cout << "\tMessage: " << filePath << endl;
-                cout << "\tLen: " << filePath.length() << endl;
+                msg.header.preamble = PREAMBLE_RM;
+                msg.header.msg_class = e_msg_class_request;
+                msg.header.msg_type = e_msg_type_rm;
+                msg.header.timestamp = millisec_since_epoch;
+                msg.header.length_of_data = filePath.length();
+                msg.file_path = filePath;
 
                 // **** SETUP MEMORY SPACE FOR SENDING ****
-                data_to_send = (char *)malloc(sizeof(struct message_header) + msg.length_of_data);
+                data_to_send = (char *)malloc(size_of_header_not_padding + msg.header.length_of_data);
                 int idex = 0;
-                memcpy(data_to_send + idex, &msg.preamble, sizeof(msg.preamble));
-                idex += sizeof(msg.preamble);
-                memcpy(data_to_send + idex, &msg.msg_class, sizeof(msg.msg_class));
-                idex += sizeof(msg.msg_class);
-                memcpy(data_to_send + idex, &msg.msg_type, sizeof(msg.msg_type));
-                idex += sizeof(msg.msg_type);
-                memcpy(data_to_send + idex, &msg.timestamp, sizeof(msg.timestamp));
-                idex += sizeof(msg.timestamp);
-                memcpy(data_to_send + idex, &msg.length_of_data, sizeof(msg.length_of_data));
-                memcpy(data_to_send + sizeof(struct message_header), (char *)filePath.c_str(), msg.length_of_data);
+                memcpy(data_to_send + idex, &msg.header.preamble, sizeof(msg.header.preamble));
+                idex += sizeof(msg.header.preamble);
+                memcpy(data_to_send + idex, &msg.header.msg_class, sizeof(msg.header.msg_class));
+                idex += sizeof(msg.header.msg_class);
+                memcpy(data_to_send + idex, &msg.header.msg_type, sizeof(msg.header.msg_type));
+                idex += sizeof(msg.header.msg_type);
+                memcpy(data_to_send + idex, &msg.header.timestamp, sizeof(msg.header.timestamp));
+                idex += sizeof(msg.header.timestamp);
+                memcpy(data_to_send + idex, &msg.header.length_of_data, sizeof(msg.header.length_of_data));
+                idex += sizeof(msg.header.length_of_data);
+                memcpy(data_to_send + idex, (char *)msg.file_path.c_str(), msg.header.length_of_data);
 
                 // **** TOTAL BYTES WE SEND *****
-                printf("\nTotal data to send: %ld bytes\n", sizeof(struct message_header) + msg.length_of_data);
+                printf("\nTotal data to send: %d bytes\n", msg.header.length_of_data);
 
                 // **** SENDING DATA TO SERVER ****
-                int statusSend = send(sockfd, data_to_send, sizeof(struct message_header) + msg.length_of_data, 0);
+                int statusSend = send(sockfd, data_to_send, size_of_header_not_padding + msg.header.length_of_data, 0);
                 if (statusSend < 0)
                 {
                     perror("\nError: Sending failed\n");
@@ -367,10 +307,9 @@ int main(int argc, char *argv[])
                     printf("\nClient send %d bytes\n\n", statusSend);
                 }
 
-                // ********* RECEIVING RESPONSE FROM SERVER *******
-
+                // ************** RECEIVING RESPONSE FROM SERVER **********
                 // **** Setup variables for communicating
-                message_header recmsg;
+                message_rm recmsg;
                 char *data_recv = (char *)malloc(1024);
                 char message[1024];
                 // **** RECEIVING MESSAGE FROM SERVER
@@ -387,28 +326,21 @@ int main(int argc, char *argv[])
 
                 // **** FULLFILL VALUES
                 idex = 0;
-                memcpy(&recmsg.preamble, data_recv + idex, sizeof(recmsg.preamble));
-                idex += sizeof(recmsg.preamble);
-                memcpy(&recmsg.msg_class, data_recv + idex, sizeof(recmsg.msg_class));
-                idex += sizeof(recmsg.msg_class);
-                memcpy(&recmsg.msg_type, data_recv + idex, sizeof(recmsg.msg_type));
-                idex += sizeof(recmsg.msg_type);
-                memcpy(&recmsg.timestamp, data_recv + idex, sizeof(recmsg.timestamp));
-                idex += sizeof(recmsg.timestamp);
-                memcpy(&recmsg.length_of_data, data_recv + idex, sizeof(recmsg.length_of_data));
-                memcpy(&message, data_recv + sizeof(message_header), recmsg.length_of_data);
+                memcpy(&recmsg.header.preamble, data_recv + idex, sizeof(recmsg.header.preamble));
+                idex += sizeof(recmsg.header.preamble);
+                memcpy(&recmsg.header.msg_class, data_recv + idex, sizeof(recmsg.header.msg_class));
+                idex += sizeof(recmsg.header.msg_class);
+                memcpy(&recmsg.header.msg_type, data_recv + idex, sizeof(recmsg.header.msg_type));
+                idex += sizeof(recmsg.header.msg_type);
+                memcpy(&recmsg.header.timestamp, data_recv + idex, sizeof(recmsg.header.timestamp));
+                idex += sizeof(recmsg.header.timestamp);
+                memcpy(&recmsg.header.length_of_data, data_recv + idex, sizeof(recmsg.header.length_of_data));
+                idex += sizeof(recmsg.header.length_of_data);
+                memcpy(&msgToServer, data_recv + idex, recmsg.header.length_of_data);
 
                 // **** CONVERT MESSAGE TO STRING
-                string msgOfClient = getString(message, recmsg.length_of_data);
+                recmsg.file_path = getString(msgToServer, recmsg.header.length_of_data);
 
-                // **** DISPLAY DATA THAT WE RECEIVED
-                printf("\nDATA from Server:\n");
-                printf("\t  Preamble:       = %d    \n", recmsg.preamble);
-                printf("\t  Class:          = %d    \n", recmsg.msg_class);
-                printf("\t  Type:           = %d    \n", recmsg.msg_type);
-                printf("\t  timestamps:     = %ld    \n", recmsg.timestamp);
-                printf("\t  Len:            = %d    \n", recmsg.length_of_data);
-                cout << "Message from Server: " << msgOfClient << endl;
 
                 // ****** DEALLOCATED ALL MEMORY WHICH ARE ALLOCATED *****
                 free(data_recv);
@@ -417,42 +349,41 @@ int main(int argc, char *argv[])
                 data_to_send = nullptr;
             }
 
+            // **** HANDLING WITH DOWN-LOAD
             if (splitString[0] == "download")
             {
+                message_get msg;
                 // **** SETIUP DATA WE NEEDS
-                string fileName = splitString[1];
-                string localPath = splitString[2];
-
-                // **** DISPLAYING DATA
-                cout << "\n\nFILENAME: " << fileName << endl;
-                cout << "localPath: " << localPath << endl;
+                msg.file_path = splitString[1];
+                msg.local_path = splitString[2];
 
                 // **** SENDING FILENAME TO SERVER
-                msg.preamble = PREAMBLE_DL;
-                msg.msg_class = e_msg_class_request;
-                msg.msg_type = e_msg_type_get;
-                msg.timestamp = 112324;
-                msg.length_of_data = fileName.length();
-                cout << "\n\nfileName: " << fileName << " -- len: " << fileName.length() << endl;
-                data_to_send = (char *)malloc(sizeof(struct message_header) + msg.length_of_data);
+                msg.header.preamble = PREAMBLE_DL;
+                msg.header.msg_class = e_msg_class_request;
+                msg.header.msg_type = e_msg_type_get;
+                msg.header.timestamp = millisec_since_epoch;
+                msg.header.length_of_data = msg.file_path.length();
+
+                data_to_send = (char *)malloc(size_of_header_not_padding + msg.header.length_of_data);
 
                 // **** SETUP FOR SENDING FILENAME;
                 int idex = 0;
-                memcpy(data_to_send + idex, &msg.preamble, sizeof(msg.preamble));
-                idex += sizeof(msg.preamble);
-                memcpy(data_to_send + idex, &msg.msg_class, sizeof(msg.msg_class));
-                idex += sizeof(msg.msg_class);
-                memcpy(data_to_send + idex, &msg.msg_type, sizeof(msg.msg_type));
-                idex += sizeof(msg.msg_type);
-                memcpy(data_to_send + idex, &msg.timestamp, sizeof(msg.timestamp));
-                idex += sizeof(msg.timestamp);
-                memcpy(data_to_send + idex, &msg.length_of_data, sizeof(msg.length_of_data));
-                memcpy(data_to_send + sizeof(message_header), (char *)fileName.c_str(), msg.length_of_data);
+                memcpy(data_to_send + idex, &msg.header.preamble, sizeof(msg.header.preamble));
+                idex += sizeof(msg.header.preamble);
+                memcpy(data_to_send + idex, &msg.header.msg_class, sizeof(msg.header.msg_class));
+                idex += sizeof(msg.header.msg_class);
+                memcpy(data_to_send + idex, &msg.header.msg_type, sizeof(msg.header.msg_type));
+                idex += sizeof(msg.header.msg_type);
+                memcpy(data_to_send + idex, &msg.header.timestamp, sizeof(msg.header.timestamp));
+                idex += sizeof(msg.header.timestamp);
+                memcpy(data_to_send + idex, &msg.header.length_of_data, sizeof(msg.header.length_of_data));
+                idex += sizeof(msg.header.length_of_data);
+                memcpy(data_to_send + idex, (char *)msg.file_path.c_str(), msg.header.length_of_data);
 
-                printf("\nTotal data to send: %ld bytes", sizeof(struct message_header) + msg.length_of_data);
+                printf("\nTotal data to send: %d bytes", size_of_header_not_padding + msg.header.length_of_data);
 
-                // **** SENDING FILENAME TO SERVer
-                int sendVal = send(sockfd, data_to_send, sizeof(struct message_header) + msg.length_of_data, 0);
+                // **** SENDING FILENAME TO SERVER
+                int sendVal = send(sockfd, data_to_send, size_of_header_not_padding + msg.header.length_of_data, 0);
                 if (sendVal < 0)
                 {
                     cout << "Error: send failed\n";
@@ -466,42 +397,64 @@ int main(int argc, char *argv[])
 
                 // **** RECEIVING RESPONSE FROM SERVER
                 int totalRec = 0;
-                char *data_recv = new char[BUFSIZE];
-                memset(data_recv, 0, BUFSIZE);
-                printf("Line: %d \n", __LINE__);
+                char buffer[BUFSIZE];
+                memset(&buffer, 0, BUFSIZE);
 
-                while (true)
+                int rec = recv(sockfd, buffer, BUFSIZE, 0);
+                totalRec += rec;
+
+                if (strcmp(buffer,"File does not exist!") == 0)
                 {
-                    int rec = recv(sockfd, data_recv, BUFSIZE, 0);
-                    totalRec += rec;
-                    if (rec == 0)
-                    {
-                        break;
-                    }
+                    cout << "\nCould not find that file!\n\n";
+                    continue;
                 }
-                printf("Line: %d \n", __LINE__);
+
+                //recv(sockfd, buffer, BUFSIZE, 0);
+                //cout << buffer << endl;
+                size_t found = msg.file_path.find_last_of("/\\");
+                string fileName;
+                if (found != string::npos)
+                {
+                    fileName = msg.file_path.find_last_of(found + 1);
+                }
+                else
+                {
+                    fileName = msg.file_path;
+                }
                 printf("\nClien received total %d bytes\n", totalRec);
 
-                // **** CREATE & SAVE A LOCAL FILE
-                char *localfile = (char *)malloc(1 + strlen(localPath.c_str()) + strlen("local_") + strlen(msgToServer));
-                strcpy(localfile, localPath.c_str());
-                if (localPath[localPath.length() - 1] == '/')
+                cout << "fileName: " << fileName << endl;
+                char *localfile = (char *)malloc(1 + strlen(msg.local_path.c_str()) + strlen("local_") + strlen(fileName.c_str()));
+
+                strcpy(localfile, msg.local_path.c_str());
+
+                if (msg.local_path[msg.local_path.length() - 1] == '/')
                 {
                     strcat(localfile, "local_");
                 }
+                else
+                {
+                    strcat(localfile, "/local_");
+                }
                 strcat(localfile, fileName.c_str());
 
+                printf("%s -- %d\n", __FUNCTION__, __LINE__);
                 printf("\nClient save file to %s\n", localfile);
+
                 FILE *fp = fopen(localfile, "w");
-                // **** WRITING DATA TO LOCAL FILE
-                fwrite(data_recv, 1, totalRec, fp);
+                fwrite(buffer, 1, totalRec, fp);
+
+                printf("%s -- %d\n", __FUNCTION__, __LINE__);
+                fflush(fp);
+                fclose(fp);
             }
         }
-        if (data_to_send)
+        if (data_to_send != nullptr)
         {
             free(data_to_send);
             data_to_send = nullptr;
         }
+        printf("%s -- %d\n", __FUNCTION__, __LINE__);
     }
     close(sockfd); //Dong socket
     return 0;
