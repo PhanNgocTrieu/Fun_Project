@@ -107,18 +107,6 @@ int main()
     int i = 3;
     int k = 5;
     int l = 7;
-    // printf("sadfsad" ); //-> fprintf(stdout,"sadfsad");
-    // fprintf(stdout,"sadfsad");
-    // Logger* logger = Logger::GetInstance(0);
-    // Logger* logger2 = Logger::GetInstance(1);
-    // Logger *logger3 = Logger::GetInstance("file.txt");
-    // logger->SetSeverity(INFO_LEVEL);
-    // logger2->SetSeverity(INFO_LEVEL);
-    // logger3->SetSeverity(DEBUG_LEVEL);
-    // logger3->log(DEBUG_LEVEL, "Debug message %d %d %d ", i, k, l);
-    // logger2->log(INFO_LEVEL,"Info message ..... ");
-    // logger->log(INFO_LEVEL,"Infor Message......");
-
 
     do { // logger to stdout
         Logger* logger = Logger::GetInstance(0);
